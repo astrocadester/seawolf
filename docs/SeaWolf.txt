@@ -1,0 +1,100 @@
+Sea Wolf
+Midway, March 1976
+ 
+                                   Sea Wolf
+                            Option Switch Settings
+ 
+-----------------------------------------------------------------------------
+                             DIP Switch Settings
+ 1   2   3   4   5   6   7   8    Option
+-----------------------------------------------------------------------------
+                                  Time:
+                                  -----
+On  On                            60
+Off On                            70
+On  Off                           80
+Off Off                           90
+ 
+                                  Credits Per Coin
+                                  ----------------
+        On  On                    1 Coin  1 Credit
+        On  Off                   1 Coin  2 Credits
+        Off On                    2 Coins 1 Credit
+        Off Off                   2 Coins 3 Credits
+ 
+                                  High Score Reset
+                                  ----------------
+                On                High score may be reset
+                Off               High score may not be reset
+ 
+                                  Note: High score reset button is located on
+                                  the upper left cabinet front.  High score
+                                  may only be reset when game not in progress.
+ 
+                                  Extended Play
+                                  -------------
+                    On  On  On    No extended play
+                    Off On  On    2000
+                    On  Off On    3000
+                    Off Off On    4000
+                    On  On  Off   5000
+                    Off On  Off   6000
+                    On  Off Off   7000
+                    Off Off Off   8000
+-----------------------------------------------------------------------------
+ 
+Boards:
+   PC 80-900   PC Mother Board
+   PC 80-904   Power Supply Board
+   PC 596-904  Game Logic Board
+   PC 596-906  Periscope Commutator
+   PC 596-907  Explosion Lites PC Assy
+   PC 596-908  Periscope Lites
+   PC 596-909  Sound Generator
+ 
+Sound Volume Adjustments:
+ 
+   --------------------------------------------
+   | P.C. 596-909                        Jack |
+   | Sound Generator                     ---- |
+   |                                     |  | |
+   |                                     |  | |
+   |                                     ---- |
+   |   ---                                    |
+   |  /   \  B                           ---- |
+   |  | O |                              |  | |
+   |  \   /                              ---- |
+   |   ---                                 A  |
+   |                                          |
+   |  ----                           ----     |
+   |  |  |                           |  |     |
+   |  ----                           ----     |
+   |    D                              C      |
+   |                                          |
+   |  ----                       ----    ---- |
+   |  |  |                       |  |    |  | |
+   |  ----                       ----    ---- |
+   |    E                          F       G  |
+   |                                          |
+   |                                          |
+   |  ----                                    |
+   |  |  |                                    |
+   |  ----                                    |
+   |    H                                ---- |
+   |                                     |  | |
+   |                                     ---- |
+   |                                       J  |
+   |                                          |
+   --------------------------------------------
+ 
+   Note:  CW and CCW are defined as viewed from pot face.
+ 
+   A. Sonar Volume Control: to increase volume, rotate pot CCW
+   B. Master Volume Control: to increase all volumes, rotate pot CW
+   C. Sonar Rate Control: to increase pulse rate, rotate pot CCW
+   D. Torpedo Volume Control: to increase volume, rotate pot CW
+   E. Dive Sound Volume Control: to increase volume, rotate pot CW
+   F. Sonar Tone Control: to raise sonar pitch, rotate pot CCW
+   G. Ship Hit Explosion Volume: to increase volume, rotate pot CCW
+   H. Dive Tone Control: to vary tone, rotate pot as desired
+   J. Mine Explosion Volume Control: to increase volume, rotate pot CCW 
