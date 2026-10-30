@@ -1,0 +1,7 @@
+src/*.bin
+src/*.lst
+roms/sw0041.h
+roms/sw0042.g
+roms/sw0043.f
+roms/sw0044.e
+roms/seawolf.zip
