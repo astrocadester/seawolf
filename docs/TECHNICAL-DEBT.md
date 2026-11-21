@@ -21,3 +21,5 @@ Close only with project evidence/commits. See ENGINEERING-RULES.md.
 | SW-RE-003–005 | Partial / open | Resolve per-glyph, per-frame and per-descriptor graphic boundaries from native consumers. |
 
 These are evidence gates, not substitutes for original software. The inherited ENG items remain as originally recorded.
+
+Style/layout follow-up: all original `Lxxxx` labels have been replaced with contextual identifiers. Their precise control-flow interpretation remains subject to emulator tracing; naming alone is not verification. Build output is now isolated under ignored `build/` and `roms/seawolf.zip`.
