@@ -1,26 +1,41 @@
 #!/usr/bin/env bash
-# build.sh - v20261030-0001
+# Sea Wolf original Intel 8080 ROM build — bundled zmac v1.3.
 set -euo pipefail
-cd "$(dirname "$0")"
-echo "Sea Wolf (1976) - original 8080 ROM build"
-mkdir -p roms
-./tools/zmac -o src/seawolf.bin src/seawolf.asm
-test "$(wc -c < src/seawolf.bin)" -eq 4096 || { echo "ERROR: ROM image must be 4096 bytes"; exit 1; }
-for i in 1 2 3 4; do
-  case "$i" in
-    1) n=sw0041.h ;;
-    2) n=sw0042.g ;;
-    3) n=sw0043.f ;;
-    4) n=sw0044.e ;;
-  esac
-  dd if=src/seawolf.bin of="roms/$n" bs=1024 skip=$((i-1)) count=1 status=none
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+fail() { echo "ERROR: $*" >&2; exit 1; }
+for cmd in dd sha1sum zip stat; do
+    command -v "$cmd" >/dev/null 2>&1 || fail "Missing command: $cmd"
 done
-echo "Verifying original MAME ROM checksums"
-sha1sum -c <<'SHA1'
-b538277d3a633dd8a3179cff202f18d322e6fe17  roms/sw0041.h
-cc2a99b18695f61e0540c9f6bf8fe3b391dde4a0  roms/sw0042.g
-385198434b08fe4651ad2c920d44fb49cfe0bc33  roms/sw0043.f
-bd345dd72fed8ce15da76c381782b025f71b006f  roms/sw0044.e
-SHA1
-zip -jqFS roms/seawolf.zip roms/sw0041.h roms/sw0042.g roms/sw0043.f roms/sw0044.e
-echo "PASS: 4096-byte reconstruction matches all four original ROMs"
+[[ -x tools/zmac ]] || fail "Bundled tools/zmac v1.3 is unavailable"
+[[ -f src/seawolf.asm ]] || fail "Missing src/seawolf.asm"
+[[ -f roms/original/seawolf.zip ]] || fail "Missing original ROM reference"
+
+rom_names=(sw0041.h sw0042.g sw0043.f sw0044.e)
+rom_sha1=(
+    b538277d3a633dd8a3179cff202f18d322e6fe17
+    cc2a99b18695f61e0540c9f6bf8fe3b391dde4a0
+    385198434b08fe4651ad2c920d44fb49cfe0bc33
+    bd345dd72fed8ce15da76c381782b025f71b006f
+)
+mkdir -p build roms
+rm -f build/seawolf.bin build/seawolf.lst roms/seawolf.zip
+for name in "${rom_names[@]}"; do rm -f "build/$name"; done
+echo 'Sea Wolf (1976) original ROM build'
+echo '[1/3] Assemble with bundled zmac v1.3'
+./tools/zmac -c -o build/seawolf.bin -x build/seawolf.lst src/seawolf.asm
+[[ -s build/seawolf.bin ]] || fail 'Missing assembled image'
+(( $(stat -c %s build/seawolf.bin) == 4096 )) || fail 'ROM image is not 4096 bytes'
+echo '[2/3] Split ROM chips and verify original SHA-1'
+for i in 0 1 2 3; do
+    name=${rom_names[i]}
+    dd if=build/seawolf.bin of="build/$name" bs=1024 skip="$i" count=1 status=none
+    (( $(stat -c %s "build/$name") == 1024 )) || fail "$name is not 1024 bytes"
+    actual=$(sha1sum "build/$name")
+    actual=${actual%% *}
+    [[ "$actual" == "${rom_sha1[i]}" ]] || fail "$name: expected ${rom_sha1[i]}, got $actual"
+    echo "  $name PASS $actual"
+done
+echo '[3/3] Package MAME roms/seawolf.zip'
+(cd build && zip -q -X ../roms/seawolf.zip "${rom_names[@]}")
+[[ -s roms/seawolf.zip ]] || fail 'MAME ROM archive missing'
+echo 'PASS: original 4096 bytes, all four SHA-1 hashes; roms/seawolf.zip'
