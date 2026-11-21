@@ -33,191 +33,209 @@ SHIP_TABLE EQU $0F7E
 RESET_ENTRY:
         NOP
         NOP
-        LD sp,$2400
+        LD SP,$2400
         JP STARTUP_INITIALIZE
 
 ; Interrupt vector: save registers and enter object update.
 IRQ_VECTOR_08:
-        PUSH hl
-        PUSH de
-        PUSH bc
-        PUSH af
+        PUSH HL
+        PUSH DE
+        PUSH BC
+        PUSH AF
         JP IRQ_OBJECT_UPDATE
         NOP
 
 ; Interrupt vector: save registers and choose update phase.
 IRQ_VECTOR_10:
-        PUSH hl
-        PUSH de
-        PUSH bc
-        PUSH af
-        LD a,($201F)
-        AND a
-        JP nz,IRQ_ERASE_ACTIVE_SPRITE
+        PUSH HL
+        PUSH DE
+        PUSH BC
+        PUSH AF
+        LD A,($201F)
+        AND A
+        JP NZ,IRQ_ERASE_ACTIVE_SPRITE
         CALL UPDATE_WAVE_PATTERN
         CALL $012E
-        LD hl,($2016)
-        LD a,(hl)
-        AND a
-        JP p,IRQ_SET_UPDATE_PHASE
+        LD HL,($2016)
+        LD A,(HL)
+        AND A
+        JP P,IRQ_SET_UPDATE_PHASE
         AND $20
-        JP z,IRQ_SET_UPDATE_PHASE
+        JP Z,IRQ_SET_UPDATE_PHASE
         CALL LOAD_OBJECT_DRAW_PARAMETERS
-        DEC c
-        EX de,hl
+        DEC C
+        EX DE,HL
         CALL COPY_GRAPHIC_BLOCK
+
 ; Irq set update phase.
 IRQ_SET_UPDATE_PHASE:
-        LD a,$FF
+        LD A,$FF
+
 ; Irq save update phase.
 IRQ_SAVE_UPDATE_PHASE:
-        LD ($201F),a
+        LD ($201F),A
         JP IRQ_INPUT_AND_RETURN
+
 ; Irq erase active sprite.
 IRQ_ERASE_ACTIVE_SPRITE:
-        LD hl,($2016)
-        LD a,(hl)
-        AND a
-        JP p,IRQ_FINALIZE_SPRITE_PHASE
+        LD HL,($2016)
+        LD A,(HL)
+        AND A
+        JP P,IRQ_FINALIZE_SPRITE_PHASE
         AND $40
-        JP nz,IRQ_DRAW_ACTIVE_SPRITE
-        LD (hl),$00
+        JP NZ,IRQ_DRAW_ACTIVE_SPRITE
+        LD (HL),$00
         JP IRQ_FINALIZE_SPRITE_PHASE
+
 ; Irq draw active sprite.
 IRQ_DRAW_ACTIVE_SPRITE:
-        LD a,(hl)
+        LD A,(HL)
         OR $20
-        LD (hl),a
+        LD (HL),A
         CALL $0165
-        LD a,b
-        PUSH hl
-        LD hl,($201C)
-        LD b,h
-        LD c,l
-        POP hl
+        LD A,B
+        PUSH HL
+        LD HL,($201C)
+        LD B,H
+        LD C,L
+        POP HL
         CALL COPY_OBJECT_BYTES
+
 ; Irq finalize sprite phase.
 IRQ_FINALIZE_SPRITE_PHASE:
         CALL UPDATE_FRAME_TIMERS
-        XOR a
-        LD ($201F),a
+        XOR A
+        LD ($201F),A
 
 ; Sample input port and restore interrupt context.
 IRQ_INPUT_AND_RETURN:
-        IN a,($02)
-        LD b,a
-        IN a,($02)
-        LD hl,$2007
-        LD de,$09CA
-        CP b
-        CALL z,HANDLE_INPUT_CHANGE
-        POP af
-        POP bc
-        POP de
-        POP hl
+        IN A,($02)
+        LD B,A
+        IN A,($02)
+        LD HL,$2007
+        LD DE,$09CA
+        CP B
+        CALL Z,HANDLE_INPUT_CHANGE
+        POP AF
+        POP BC
+        POP DE
+        POP HL
         EI
         RET
 
 ; Update RAM-backed object descriptors during interrupt processing.
 IRQ_OBJECT_UPDATE:
-        LD a,($201F)
-        AND a
-        JP nz,$0119
+        LD A,($201F)
+        AND A
+        JP NZ,$0119
         CALL UPDATE_WAVE_PATTERN
-        LD hl,$215F
-        LD b,$44
-        XOR a
+        LD HL,$215F
+        LD B,$44
+        XOR A
+
 ; Irq clear temp buffer loop.
 IRQ_CLEAR_TEMP_BUFFER_LOOP:
-        LD (hl),a
-        INC hl
-        DEC b
-        JP nz,IRQ_CLEAR_TEMP_BUFFER_LOOP
-        LD hl,($2018)
-        LD a,$03
+        LD (HL),A
+        INC HL
+        DEC B
+        JP NZ,IRQ_CLEAR_TEMP_BUFFER_LOOP
+        LD HL,($2018)
+        LD A,$03
+
 ; Irq ship group a loop.
 IRQ_SHIP_GROUP_A_LOOP:
-        PUSH af
-        LD a,l
+        PUSH AF
+        LD A,L
         CP $58
-        JP nz,IRQ_SHIP_GROUP_A_TEST
+        JP NZ,IRQ_SHIP_GROUP_A_TEST
+
 ; Irq ship group a wrap.
 IRQ_SHIP_GROUP_A_WRAP:
-        LD hl,$2031
+        LD HL,$2031
+
 ; Irq ship group a test.
 IRQ_SHIP_GROUP_A_TEST:
-        OR h
-        JP z,IRQ_SHIP_GROUP_A_WRAP
-        PUSH hl
+        OR H
+        JP Z,IRQ_SHIP_GROUP_A_WRAP
+        PUSH HL
         CALL $01DE
-        POP hl
-        JP nc,IRQ_SHIP_GROUP_A_NEXT
-        LD ($2018),hl
+        POP HL
+        JP NC,IRQ_SHIP_GROUP_A_NEXT
+        LD ($2018),HL
+
 ; Irq ship group a next.
 IRQ_SHIP_GROUP_A_NEXT:
-        LD de,$000D
-        ADD hl,de
-        POP af
-        DEC a
-        JP nz,IRQ_SHIP_GROUP_A_LOOP
-        LD hl,($2018)
+        LD DE,$000D
+        ADD HL,DE
+        POP AF
+        DEC A
+        JP NZ,IRQ_SHIP_GROUP_A_LOOP
+        LD HL,($2018)
         CALL CLEAR_ACTIVE_OBJECT
-        LD hl,($201A)
-        LD a,$03
+        LD HL,($201A)
+        LD A,$03
+
 ; Irq ship group b loop.
 IRQ_SHIP_GROUP_B_LOOP:
-        PUSH af
-        LD a,l
+        PUSH AF
+        LD A,L
         CP $7F
-        JP nz,IRQ_SHIP_GROUP_B_TEST
+        JP NZ,IRQ_SHIP_GROUP_B_TEST
+
 ; Irq ship group b wrap.
 IRQ_SHIP_GROUP_B_WRAP:
-        LD hl,$2058
+        LD HL,$2058
+
 ; Irq ship group b test.
 IRQ_SHIP_GROUP_B_TEST:
-        OR h
-        JP z,IRQ_SHIP_GROUP_B_WRAP
-        PUSH hl
+        OR H
+        JP Z,IRQ_SHIP_GROUP_B_WRAP
+        PUSH HL
         CALL $01DE
-        POP hl
-        JP nc,IRQ_SHIP_GROUP_B_NEXT
-        LD ($201A),hl
+        POP HL
+        JP NC,IRQ_SHIP_GROUP_B_NEXT
+        LD ($201A),HL
+
 ; Irq ship group b next.
 IRQ_SHIP_GROUP_B_NEXT:
-        LD de,$000D
-        ADD hl,de
-        POP af
-        DEC a
-        JP nz,IRQ_SHIP_GROUP_B_LOOP
-        XOR a
-        LD ($2030),a
-        LD hl,($2016)
-        LD a,$04
+        LD DE,$000D
+        ADD HL,DE
+        POP AF
+        DEC A
+        JP NZ,IRQ_SHIP_GROUP_B_LOOP
+        XOR A
+        LD ($2030),A
+        LD HL,($2016)
+        LD A,$04
+
 ; Irq projectile group loop.
 IRQ_PROJECTILE_GROUP_LOOP:
-        PUSH af
-        LD a,l
+        PUSH AF
+        LD A,L
         CP $5F
-        JP nz,IRQ_PROJECTILE_GROUP_TEST
+        JP NZ,IRQ_PROJECTILE_GROUP_TEST
+
 ; Irq projectile group wrap.
 IRQ_PROJECTILE_GROUP_WRAP:
-        LD hl,$20E7
+        LD HL,$20E7
+
 ; Irq projectile group test.
 IRQ_PROJECTILE_GROUP_TEST:
-        OR h
-        JP z,IRQ_PROJECTILE_GROUP_WRAP
-        PUSH hl
+        OR H
+        JP Z,IRQ_PROJECTILE_GROUP_WRAP
+        PUSH HL
         CALL UPDATE_PROJECTILE_DESCRIPTOR
-        POP hl
-        JP nc,IRQ_PROJECTILE_GROUP_NEXT
-        LD ($2016),hl
+        POP HL
+        JP NC,IRQ_PROJECTILE_GROUP_NEXT
+        LD ($2016),HL
+
 ; irq projectile group next; internal branch at IRQ_PROJECTILE_GROUP_NEXT:0A.
 IRQ_PROJECTILE_GROUP_NEXT:
-        LD de,$001E
-        ADD hl,de
-        POP af
-        DEC a
-        JP nz,IRQ_PROJECTILE_GROUP_LOOP
+        LD DE,$001E
+        ADD HL,DE
+        POP AF
+        DEC A
+        JP NZ,IRQ_PROJECTILE_GROUP_LOOP
         CALL ADVANCE_OBJECT_CURSOR
         JP IRQ_INPUT_AND_RETURN
 
@@ -225,11 +243,11 @@ IRQ_PROJECTILE_GROUP_NEXT:
 ; IRQ_OBJECT_DRAW (IRQ_OBJECT_DRAW:19) - Draw active ship objects
 ; -----------------------------------------------------------------------------
 IRQ_OBJECT_DRAW:
-        LD hl,($201A)
+        LD HL,($201A)
         CALL CLEAR_ACTIVE_OBJECT
-        LD hl,($201A)
+        LD HL,($201A)
         CALL $013A
-        LD hl,($2018)
+        LD HL,($2018)
         CALL $013A
         JP IRQ_INPUT_AND_RETURN
 
@@ -237,10 +255,10 @@ IRQ_OBJECT_DRAW:
 ; UPDATE_SELECTED_OBJECT (UPDATE_SELECTED_OBJECT:2E) - Update the selected active object
 ; -----------------------------------------------------------------------------
 UPDATE_SELECTED_OBJECT:
-        LD hl,($2014)
-        LD a,(hl)
-        AND a
-        RET p
+        LD HL,($2014)
+        LD A,(HL)
+        AND A
+        RET P
         CALL $0165
         JP $0192
 
@@ -248,602 +266,635 @@ UPDATE_SELECTED_OBJECT:
 ; UPDATE_SHIP_OBJECT (UPDATE_SHIP_OBJECT:3A) - Process a ship-object state field
 ; -----------------------------------------------------------------------------
 UPDATE_SHIP_OBJECT:
-        LD a,(hl)
-        AND a
-        RET p
+        LD A,(HL)
+        AND A
+        RET P
         AND $40
-        JP nz,SHIP_OBJECT_DRAW_PENDING
-        LD (hl),$00
+        JP NZ,SHIP_OBJECT_DRAW_PENDING
+        LD (HL),$00
         RET
+
 ; ship object draw pending; internal branch at SHIP_OBJECT_DRAW_PENDING:45.
 SHIP_OBJECT_DRAW_PENDING:
-        LD a,(hl)
+        LD A,(HL)
         OR $20
-        LD (hl),a
-        PUSH af
+        LD (HL),A
+        PUSH AF
         CALL $0165
-        POP af
+        POP AF
         AND $10
-        JP z,$0192
-        LD a,c
-        ADD a,l
-        LD l,a
-        PUSH hl
-        LD hl,$2030
-        LD a,(hl)
+        JP Z,$0192
+        LD A,C
+        ADD A,L
+        LD L,A
+        PUSH HL
+        LD HL,$2030
+        LD A,(HL)
         CPL
         AND $07
-        LD (hl),a
-        POP hl
-        OUT ($04),a
+        LD (HL),A
+        POP HL
+        OUT ($04),A
         JP $01B8
 
 ; -----------------------------------------------------------------------------
 ; PREPARE_SPRITE_COPY (PREPARE_SPRITE_COPY:65) - Read the object's graphic source and destination parameters
 ; -----------------------------------------------------------------------------
 PREPARE_SPRITE_COPY:
-        INC hl
-        INC hl
-        LD e,(hl)
-        INC hl
-        INC hl
-        INC hl
-        LD d,(hl)
-        INC hl
-        INC hl
+        INC HL
+        INC HL
+        LD E,(HL)
+        INC HL
+        INC HL
+        INC HL
+        LD D,(HL)
+        INC HL
+        INC HL
         CALL BIT_SHIFT_SETUP
-        LD a,c
-        LD ($2030),a
-        OUT ($04),a
-        PUSH de
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        INC hl
-        EX de,hl
-        LD c,(hl)
-        INC hl
-        LD b,(hl)
-        INC hl
-        EX (sp),hl
-        EX de,hl
-        LD (hl),e
-        INC hl
-        LD (hl),d
-        INC hl
-        LD (hl),c
-        INC (hl)
-        INC hl
-        LD (hl),b
-        INC hl
-        LD ($201C),hl
-        EX de,hl
-        POP de
+        LD A,C
+        LD ($2030),A
+        OUT ($04),A
+        PUSH DE
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        INC HL
+        EX DE,HL
+        LD C,(HL)
+        INC HL
+        LD B,(HL)
+        INC HL
+        EX (SP),HL
+        EX DE,HL
+        LD (HL),E
+        INC HL
+        LD (HL),D
+        INC HL
+        LD (HL),C
+        INC (HL)
+        INC HL
+        LD (HL),B
+        INC HL
+        LD ($201C),HL
+        EX DE,HL
+        POP DE
         RET
 
 ; -----------------------------------------------------------------------------
 ; DRAW_SPRITE_NORMAL (DRAW_SPRITE_NORMAL:92) - Copy sprite bytes through the shifter path
 ; -----------------------------------------------------------------------------
 DRAW_SPRITE_NORMAL:
-        PUSH bc
-        PUSH hl
+        PUSH BC
+        PUSH HL
+
 ; sprite normal row loop; internal branch at SPRITE_NORMAL_ROW_LOOP:94.
 SPRITE_NORMAL_ROW_LOOP:
-        LD a,(de)
-        INC de
-        OUT ($03),a
-        IN a,($03)
-        LD (hl),a
-        INC hl
-        DEC c
-        JP nz,SPRITE_NORMAL_ROW_LOOP
-        XOR a
-        OUT ($03),a
-        IN a,($03)
-        LD (hl),a
-        LD bc,$0020
-        POP hl
-        ADD hl,bc
-        POP bc
-        LD a,l
+        LD A,(DE)
+        INC DE
+        OUT ($03),A
+        IN A,($03)
+        LD (HL),A
+        INC HL
+        DEC C
+        JP NZ,SPRITE_NORMAL_ROW_LOOP
+        XOR A
+        OUT ($03),A
+        IN A,($03)
+        LD (HL),A
+        LD BC,$0020
+        POP HL
+        ADD HL,BC
+        POP BC
+        LD A,L
         AND $E0
-        JP nz,$0192
-        LD a,h
+        JP NZ,$0192
+        LD A,H
         RRA
-        JP c,$0192
+        JP C,$0192
         RET
 
 ; -----------------------------------------------------------------------------
 ; DRAW_SPRITE_SHIFTED (DRAW_SPRITE_SHIFTED:B8) - Copy sprite bytes through the alternate shifted path
 ; -----------------------------------------------------------------------------
 DRAW_SPRITE_SHIFTED:
-        PUSH bc
-        PUSH hl
+        PUSH BC
+        PUSH HL
+
 ; sprite shifted row loop; internal branch at SPRITE_SHIFTED_ROW_LOOP:BA.
 SPRITE_SHIFTED_ROW_LOOP:
-        LD a,(de)
-        INC de
-        OUT ($03),a
-        IN a,($00)
-        LD (hl),a
-        DEC hl
-        DEC c
-        JP nz,SPRITE_SHIFTED_ROW_LOOP
-        XOR a
-        OUT ($03),a
-        IN a,($00)
-        LD (hl),a
-        LD bc,$0020
-        POP hl
-        ADD hl,bc
-        POP bc
-        LD a,l
+        LD A,(DE)
+        INC DE
+        OUT ($03),A
+        IN A,($00)
+        LD (HL),A
+        DEC HL
+        DEC C
+        JP NZ,SPRITE_SHIFTED_ROW_LOOP
+        XOR A
+        OUT ($03),A
+        IN A,($00)
+        LD (HL),A
+        LD BC,$0020
+        POP HL
+        ADD HL,BC
+        POP BC
+        LD A,L
         AND $E0
-        JP nz,$01B8
-        LD a,h
+        JP NZ,$01B8
+        LD A,H
         RRA
-        JP c,$01B8
+        JP C,$01B8
         RET
 
 ; -----------------------------------------------------------------------------
 ; UPDATE_SHIP_DESCRIPTOR (UPDATE_SHIP_DESCRIPTOR:DE) - Advance and test ship descriptor
 ; -----------------------------------------------------------------------------
 UPDATE_SHIP_DESCRIPTOR:
-        LD a,(hl)
-        AND a
-        RET p
-        PUSH hl
-        INC hl
+        LD A,(HL)
+        AND A
+        RET P
+        PUSH HL
+        INC HL
         AND $07
-        JP nz,SHIP_DESCRIPTOR_STATE_CHECK
-        INC hl
-        INC hl
+        JP NZ,SHIP_DESCRIPTOR_STATE_CHECK
+        INC HL
+        INC HL
         JP SHIP_DESCRIPTOR_TOGGLE_STATE
+
 ; ship descriptor state check; internal branch at SHIP_DESCRIPTOR_STATE_CHECK:ED.
 SHIP_DESCRIPTOR_STATE_CHECK:
-        LD a,(hl)
-        LD de,$215F
-        AND a
-        JP p,SHIP_DESCRIPTOR_POSITION_UPDATE
-        LD de,$2181
+        LD A,(HL)
+        LD DE,$215F
+        AND A
+        JP P,SHIP_DESCRIPTOR_POSITION_UPDATE
+        LD DE,$2181
+
 ; ship descriptor position update; internal branch at SHIP_DESCRIPTOR_POSITION_UPDATE:F8.
 SHIP_DESCRIPTOR_POSITION_UPDATE:
-        LD b,a
-        INC hl
-        ADD a,(hl)
-        LD (hl),a
-        LD a,b
-        AND a
-        LD a,(hl)
-        JP p,SHIP_DESCRIPTOR_LIMIT_CHECK
+        LD B,A
+        INC HL
+        ADD A,(HL)
+        LD (HL),A
+        LD A,B
+        AND A
+        LD A,(HL)
+        JP P,SHIP_DESCRIPTOR_LIMIT_CHECK
         CP $01
-        JP nc,SHIP_DESCRIPTOR_ROTATE_SHIFT
+        JP NC,SHIP_DESCRIPTOR_ROTATE_SHIFT
+
 ; Ship descriptor clear flag.
 SHIP_DESCRIPTOR_CLEAR_FLAG:
-        EX (sp),hl
-        LD a,(hl)
+        EX (SP),HL
+        LD A,(HL)
         AND $BF
-        LD (hl),a
-        EX (sp),hl
+        LD (HL),A
+        EX (SP),HL
         JP SHIP_DESCRIPTOR_ROTATE_SHIFT
+
 ; Ship descriptor limit check.
 SHIP_DESCRIPTOR_LIMIT_CHECK:
-        INC hl
-        CP (hl)
-        DEC hl
-        JP nc,SHIP_DESCRIPTOR_CLEAR_FLAG
+        INC HL
+        CP (HL)
+        DEC HL
+        JP NC,SHIP_DESCRIPTOR_CLEAR_FLAG
+
 ; Ship descriptor rotate shift.
 SHIP_DESCRIPTOR_ROTATE_SHIFT:
-        LD a,(hl)
+        LD A,(HL)
         RRCA
         RRCA
         RRCA
         AND $1F
-        ADD a,e
-        LD e,a
-        EX (sp),hl
-        LD a,(hl)
-        EX (sp),hl
+        ADD A,E
+        LD E,A
+        EX (SP),HL
+        LD A,(HL)
+        EX (SP),HL
         AND $07
-        LD b,a
-        INC hl
-        LD a,(hl)
+        LD B,A
+        INC HL
+        LD A,(HL)
         CPL
-        INC a
+        INC A
         RRCA
         RRCA
         RRCA
         AND $07
-        ADD a,$03
-        EX de,hl
+        ADD A,$03
+        EX DE,HL
+
 ; Ship descriptor fill loop.
 SHIP_DESCRIPTOR_FILL_LOOP:
-        LD (hl),b
-        INC hl
-        DEC a
-        JP nz,SHIP_DESCRIPTOR_FILL_LOOP
-        EX de,hl
+        LD (HL),B
+        INC HL
+        DEC A
+        JP NZ,SHIP_DESCRIPTOR_FILL_LOOP
+        EX DE,HL
+
 ; Ship descriptor toggle state.
 SHIP_DESCRIPTOR_TOGGLE_STATE:
-        LD de,$202F
-        LD a,(de)
+        LD DE,$202F
+        LD A,(DE)
         CPL
-        LD (de),a
-        JP nz,SHIP_DESCRIPTOR_RETURN_CARRY
-        INC hl
-        LD a,(hl)
-        INC hl
-        ADD a,(hl)
-        LD (hl),a
-        INC hl
-        CP (hl)
+        LD (DE),A
+        JP NZ,SHIP_DESCRIPTOR_RETURN_CARRY
+        INC HL
+        LD A,(HL)
+        INC HL
+        ADD A,(HL)
+        LD (HL),A
+        INC HL
+        CP (HL)
+
 ; Ship descriptor return carry.
 SHIP_DESCRIPTOR_RETURN_CARRY:
-        POP hl
+        POP HL
         SCF
-        RET nz
-        LD a,(hl)
+        RET NZ
+        LD A,(HL)
         AND $BF
-        LD (hl),a
+        LD (HL),A
         SCF
         RET
 
 ; Advance and test torpedo or mine descriptor.
 UPDATE_PROJECTILE_DESCRIPTOR:
-        LD a,(hl)
-        AND a
-        RET p
-        PUSH hl
-        INC hl
-        INC hl
-        LD c,(hl)
-        INC hl
-        INC hl
-        LD a,(hl)
-        INC hl
-        LD b,(hl)
-        ADD a,b
-        LD (hl),a
-        LD a,b
+        LD A,(HL)
+        AND A
+        RET P
+        PUSH HL
+        INC HL
+        INC HL
+        LD C,(HL)
+        INC HL
+        INC HL
+        LD A,(HL)
+        INC HL
+        LD B,(HL)
+        ADD A,B
+        LD (HL),A
+        LD A,B
         CP $C0
-        JP nc,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        JP NC,PROJECTILE_DESCRIPTOR_RETURN_CARRY
         CP $30
-        JP nc,PROJECTILE_DESCRIPTOR_LIMIT_CHECK
-        LD a,($2024)
-        AND a
-        JP z,PROJECTILE_DESCRIPTOR_LIMIT_CHECK
-        INC a
-        INC a
-        LD ($2024),a
+        JP NC,PROJECTILE_DESCRIPTOR_LIMIT_CHECK
+        LD A,($2024)
+        AND A
+        JP Z,PROJECTILE_DESCRIPTOR_LIMIT_CHECK
+        INC A
+        INC A
+        LD ($2024),A
+
 ; Projectile descriptor limit check.
 PROJECTILE_DESCRIPTOR_LIMIT_CHECK:
-        LD a,(hl)
-        INC hl
-        CP (hl)
-        JP nc,PROJECTILE_DESCRIPTOR_SHIFT_CHECK
-        LD a,$C0
-        ADD a,(hl)
-        LD (hl),a
-        DEC hl
-        DEC hl
-        INC (hl)
-        INC (hl)
-        LD a,(hl)
-        INC hl
-        INC hl
-        INC hl
-        JP z,PROJECTILE_DESCRIPTOR_CLEAR_FLAG
-        LD (hl),$88
+        LD A,(HL)
+        INC HL
+        CP (HL)
+        JP NC,PROJECTILE_DESCRIPTOR_SHIFT_CHECK
+        LD A,$C0
+        ADD A,(HL)
+        LD (HL),A
+        DEC HL
+        DEC HL
+        INC (HL)
+        INC (HL)
+        LD A,(HL)
+        INC HL
+        INC HL
+        INC HL
+        JP Z,PROJECTILE_DESCRIPTOR_CLEAR_FLAG
+        LD (HL),$88
         CP $FC
-        JP z,PROJECTILE_DESCRIPTOR_SHIFT_CHECK
-        LD (hl),$98
+        JP Z,PROJECTILE_DESCRIPTOR_SHIFT_CHECK
+        LD (HL),$98
         JP PROJECTILE_DESCRIPTOR_SHIFT_CHECK
+
 ; Projectile descriptor clear flag.
 PROJECTILE_DESCRIPTOR_CLEAR_FLAG:
-        EX (sp),hl
-        LD a,(hl)
+        EX (SP),HL
+        LD A,(HL)
         AND $BF
-        LD (hl),a
-        EX (sp),hl
+        LD (HL),A
+        EX (SP),HL
+
 ; Projectile descriptor shift check.
 PROJECTILE_DESCRIPTOR_SHIFT_CHECK:
-        LD de,$2030
-        LD a,(de)
-        AND a
-        JP nz,PROJECTILE_DESCRIPTOR_RETURN_CARRY
-        INC a
-        LD (de),a
-        LD a,b
+        LD DE,$2030
+        LD A,(DE)
+        AND A
+        JP NZ,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        INC A
+        LD (DE),A
+        LD A,B
         AND $10
-        JP z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
-        LD de,$0007
-        ADD hl,de
-        LD a,(hl)
-        AND a
-        JP nz,PROJECTILE_DESCRIPTOR_RESET_FLAG
-        ADD hl,de
-        LD a,b
-        ADD a,e
-        LD b,a
+        JP Z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        LD DE,$0007
+        ADD HL,DE
+        LD A,(HL)
+        AND A
+        JP NZ,PROJECTILE_DESCRIPTOR_RESET_FLAG
+        ADD HL,DE
+        LD A,B
+        ADD A,E
+        LD B,A
         AND $10
-        JP z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
-        LD a,(hl)
-        AND a
-        JP z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        JP Z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        LD A,(HL)
+        AND A
+        JP Z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+
 ; Projectile descriptor reset flag.
 PROJECTILE_DESCRIPTOR_RESET_FLAG:
-        EX (sp),hl
-        LD a,(hl)
+        EX (SP),HL
+        LD A,(HL)
         AND $BF
-        LD (hl),a
-        EX (sp),hl
-        LD a,b
+        LD (HL),A
+        EX (SP),HL
+        LD A,B
         SUB $40
-        LD b,a
-        JP c,PROJECTILE_DESCRIPTOR_SCAN_RESET
-        LD hl,$21A1
+        LD B,A
+        JP C,PROJECTILE_DESCRIPTOR_SCAN_RESET
+        LD HL,$21A1
+
 ; Projectile descriptor scan fields.
 PROJECTILE_DESCRIPTOR_SCAN_FIELDS:
-        INC hl
-        INC hl
-        LD a,(hl)
-        AND a
-        JP nz,PROJECTILE_DESCRIPTOR_SCAN_FIELDS
-        LD (hl),b
-        INC hl
-        LD (hl),c
+        INC HL
+        INC HL
+        LD A,(HL)
+        AND A
+        JP NZ,PROJECTILE_DESCRIPTOR_SCAN_FIELDS
+        LD (HL),B
+        INC HL
+        LD (HL),C
         JP PROJECTILE_DESCRIPTOR_RETURN_CARRY
+
 ; Projectile descriptor scan reset.
 PROJECTILE_DESCRIPTOR_SCAN_RESET:
-        LD hl,$21BE
+        LD HL,$21BE
+
 ; Projectile descriptor scan next.
 PROJECTILE_DESCRIPTOR_SCAN_NEXT:
-        INC hl
-        INC hl
-        INC hl
-        LD a,(hl)
-        AND a
-        JP nz,PROJECTILE_DESCRIPTOR_SCAN_NEXT
-        LD a,b
-        ADD a,$20
-        LD de,$2160
-        JP m,PROJECTILE_DESCRIPTOR_ROTATE_SHIFT
-        LD de,$2182
+        INC HL
+        INC HL
+        INC HL
+        LD A,(HL)
+        AND A
+        JP NZ,PROJECTILE_DESCRIPTOR_SCAN_NEXT
+        LD A,B
+        ADD A,$20
+        LD DE,$2160
+        JP M,PROJECTILE_DESCRIPTOR_ROTATE_SHIFT
+        LD DE,$2182
+
 ; Projectile descriptor rotate shift.
 PROJECTILE_DESCRIPTOR_ROTATE_SHIFT:
-        LD a,c
+        LD A,C
         RRCA
         RRCA
         RRCA
         AND $1F
-        ADD a,e
-        LD e,a
-        LD a,(de)
-        AND a
-        JP z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
-        LD (hl),a
-        INC hl
-        LD (hl),c
-        INC hl
-        LD (hl),b
+        ADD A,E
+        LD E,A
+        LD A,(DE)
+        AND A
+        JP Z,PROJECTILE_DESCRIPTOR_RETURN_CARRY
+        LD (HL),A
+        INC HL
+        LD (HL),C
+        INC HL
+        LD (HL),B
+
 ; Projectile descriptor return carry.
 PROJECTILE_DESCRIPTOR_RETURN_CARRY:
         SCF
-        POP hl
+        POP HL
         RET
 
 ; Clear active-object display state.
 CLEAR_ACTIVE_OBJECT:
-        LD a,(hl)
-        AND a
-        RET p
+        LD A,(HL)
+        AND A
+        RET P
         AND $20
-        RET z
+        RET Z
         CALL LOAD_OBJECT_DRAW_PARAMETERS
-        EX de,hl
-        LD b,c
+        EX DE,HL
+        LD B,C
+
 ; Object clear setup.
 OBJECT_CLEAR_SETUP:
-        XOR a
-        PUSH hl
+        XOR A
+        PUSH HL
+
 ; Object clear bytes loop.
 OBJECT_CLEAR_BYTES_LOOP:
-        LD (hl),a
-        INC hl
-        DEC c
-        JP nz,OBJECT_CLEAR_BYTES_LOOP
-        LD de,$0020
-        POP hl
-        ADD hl,de
-        LD c,b
-        LD a,l
+        LD (HL),A
+        INC HL
+        DEC C
+        JP NZ,OBJECT_CLEAR_BYTES_LOOP
+        LD DE,$0020
+        POP HL
+        ADD HL,DE
+        LD C,B
+        LD A,L
         AND $E0
-        JP nz,OBJECT_CLEAR_SETUP
-        LD a,h
+        JP NZ,OBJECT_CLEAR_SETUP
+        LD A,H
         RRA
-        JP c,OBJECT_CLEAR_SETUP
+        JP C,OBJECT_CLEAR_SETUP
         RET
 
 ; Select the next active object descriptor.
 ADVANCE_OBJECT_CURSOR:
-        LD hl,($2014)
-        LD b,$0A
-        LD a,l
-        OR h
-        JP nz,OBJECT_CURSOR_STRIDE_SETUP
-        LD hl,$2072
+        LD HL,($2014)
+        LD B,$0A
+        LD A,L
+        OR H
+        JP NZ,OBJECT_CURSOR_STRIDE_SETUP
+        LD HL,$2072
+
 ; Object cursor stride setup.
 OBJECT_CURSOR_STRIDE_SETUP:
-        LD de,$000D
+        LD DE,$000D
+
 ; Object cursor next record.
 OBJECT_CURSOR_NEXT_RECORD:
-        ADD hl,de
-        DEC b
-        RET z
-        LD a,l
+        ADD HL,DE
+        DEC B
+        RET Z
+        LD A,L
         CP $E7
-        JP nz,OBJECT_CURSOR_SAVE_ACTIVE
-        LD hl,$207F
+        JP NZ,OBJECT_CURSOR_SAVE_ACTIVE
+        LD HL,$207F
+
 ; Object cursor save active.
 OBJECT_CURSOR_SAVE_ACTIVE:
-        LD a,(hl)
-        AND a
-        JP p,OBJECT_CURSOR_NEXT_RECORD
-        LD ($2014),hl
-        INC hl
-        LD a,(hl)
-        INC hl
-        ADD a,(hl)
-        LD (hl),a
+        LD A,(HL)
+        AND A
+        JP P,OBJECT_CURSOR_NEXT_RECORD
+        LD ($2014),HL
+        INC HL
+        LD A,(HL)
+        INC HL
+        ADD A,(HL)
+        LD (HL),A
         RET
 
 ; Load drawing parameters from an object record.
 LOAD_OBJECT_DRAW_PARAMETERS:
-        LD de,$0009
-        ADD hl,de
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        INC hl
-        LD c,(hl)
-        INC hl
-        LD b,(hl)
-        INC hl
+        LD DE,$0009
+        ADD HL,DE
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        INC HL
+        LD C,(HL)
+        INC HL
+        LD B,(HL)
+        INC HL
         RET
 
 ; Update frame-related countdown state.
 UPDATE_FRAME_TIMERS:
-        LD a,($2020)
-        AND a
-        RET nz
-        LD b,a
-        LD hl,$2003
-        DEC (hl)
-        JP nz,FRAME_DECREMENT_STATE_2011
-        LD (hl),$1E
-        LD hl,$2002
-        LD a,(hl)
-        AND a
-        JP z,FRAME_DECREMENT_STATE_2010
-        ADD a,$99
+        LD A,($2020)
+        AND A
+        RET NZ
+        LD B,A
+        LD HL,$2003
+        DEC (HL)
+        JP NZ,FRAME_DECREMENT_STATE_2011
+        LD (HL),$1E
+        LD HL,$2002
+        LD A,(HL)
+        AND A
+        JP Z,FRAME_DECREMENT_STATE_2010
+        ADD A,$99
         DAA
-        LD (hl),a
-        JP nz,FRAME_DECREMENT_STATE_2010
-        LD b,$01
+        LD (HL),A
+        JP NZ,FRAME_DECREMENT_STATE_2010
+        LD B,$01
+
 ; frame decrement state 2010; internal branch at $0388.
 FRAME_DECREMENT_STATE_2010:
-        LD hl,$2010
+        LD HL,$2010
         CALL DECREMENT_TIMER_IF_ACTIVE
+
 ; frame decrement state 2011; internal branch at $038E.
 FRAME_DECREMENT_STATE_2011:
-        LD hl,$2011
+        LD HL,$2011
         CALL DECREMENT_TIMER_IF_ACTIVE
-        LD hl,$2021
+        LD HL,$2021
         CALL DECREMENT_TIMER_IF_ACTIVE
-        INC hl
+        INC HL
         CALL DECREMENT_TIMER_IF_ACTIVE
-        INC hl
+        INC HL
         CALL DECREMENT_TIMER_IF_ACTIVE
-        INC hl
+        INC HL
         CALL DECREMENT_TIMER_IF_ACTIVE
-        INC hl
+        INC HL
         CALL DECREMENT_TIMER_IF_ACTIVE
-        LD ($2020),a
+        LD ($2020),A
         RET
 
 ; Decrement a nonzero countdown byte.
 DECREMENT_TIMER_IF_ACTIVE:
-        LD a,(hl)
-        AND a
-        JP z,FRAME_ACCUMULATE_TIMER_FLAGS
-        DEC (hl)
-        JP nz,FRAME_ACCUMULATE_TIMER_FLAGS
+        LD A,(HL)
+        AND A
+        JP Z,FRAME_ACCUMULATE_TIMER_FLAGS
+        DEC (HL)
+        JP NZ,FRAME_ACCUMULATE_TIMER_FLAGS
         SCF
+
 ; Frame accumulate timer flags.
 FRAME_ACCUMULATE_TIMER_FLAGS:
-        LD a,b
+        LD A,B
         RLA
-        LD b,a
+        LD B,A
         RET
 
 ; Update wave/display pattern state.
 UPDATE_WAVE_PATTERN:
-        LD bc,$2027
-        LD a,(bc)
-        ADD a,$0A
+        LD BC,$2027
+        LD A,(BC)
+        ADD A,$0A
         CP $1E
-        JP nz,WAVE_SAVE_POSITION
-        XOR a
+        JP NZ,WAVE_SAVE_POSITION
+        XOR A
+
 ; Wave save position.
 WAVE_SAVE_POSITION:
-        LD (bc),a
-        INC bc
-        LD e,a
-        LD d,$00
-        LD hl,$0BF3
-        ADD hl,de
-        EX de,hl
-        LD a,(bc)
-        INC a
+        LD (BC),A
+        INC BC
+        LD E,A
+        LD D,$00
+        LD HL,$0BF3
+        ADD HL,DE
+        EX DE,HL
+        LD A,(BC)
+        INC A
         AND $1F
-        LD (bc),a
-        LD hl,$27E0
-        ADD a,l
-        LD l,a
-        LD bc,$0020
+        LD (BC),A
+        LD HL,$27E0
+        ADD A,L
+        LD L,A
+        LD BC,$0020
+
 ; Wave copy row bytes.
 WAVE_COPY_ROW_BYTES:
-        LD a,(de)
-        INC de
-        LD (hl),a
-        ADD hl,bc
-        LD a,l
+        LD A,(DE)
+        INC DE
+        LD (HL),A
+        ADD HL,BC
+        LD A,L
         AND $E0
         CP $60
-        JP nz,WAVE_COPY_ROW_BYTES
+        JP NZ,WAVE_COPY_ROW_BYTES
         RET
 
 ; Convert numeric state for display.
 CONVERT_DISPLAY_DIGITS:
-        LD hl,$0000
-        LD de,$0000
-        LD c,$02
+        LD HL,$0000
+        LD DE,$0000
+        LD C,$02
+
 ; Display digit sum reset.
 DISPLAY_DIGIT_SUM_RESET:
-        XOR a
+        XOR A
+
 ; Display digit sum loop.
 DISPLAY_DIGIT_SUM_LOOP:
-        ADD a,(hl)
-        INC hl
-        LD b,a
-        LD a,c
-        CP h
-        LD a,b
-        JP nz,DISPLAY_DIGIT_SUM_LOOP
-        PUSH hl
-        LD hl,$0429
-        ADD hl,de
-        CP (hl)
-        LD a,$40
-        JP z,DISPLAY_STORE_DIGIT
-        LD hl,$0432
-        ADD hl,de
-        LD a,(hl)
+        ADD A,(HL)
+        INC HL
+        LD B,A
+        LD A,C
+        CP H
+        LD A,B
+        JP NZ,DISPLAY_DIGIT_SUM_LOOP
+        PUSH HL
+        LD HL,$0429
+        ADD HL,DE
+        CP (HL)
+        LD A,$40
+        JP Z,DISPLAY_STORE_DIGIT
+        LD HL,$0432
+        ADD HL,DE
+        LD A,(HL)
+
 ; Display store digit.
 DISPLAY_STORE_DIGIT:
-        LD hl,$21E9
-        ADD hl,de
-        LD (hl),a
-        POP hl
-        INC de
-        INC c
-        INC c
-        LD a,$12
-        CP c
-        JP nz,DISPLAY_DIGIT_SUM_RESET
-        LD hl,$21E9
-        LD de,$3008
-        LD a,$08
+        LD HL,$21E9
+        ADD HL,DE
+        LD (HL),A
+        POP HL
+        INC DE
+        INC C
+        INC C
+        LD A,$12
+        CP C
+        JP NZ,DISPLAY_DIGIT_SUM_RESET
+        LD HL,$21E9
+        LD DE,$3008
+        LD A,$08
         CALL RENDER_GAME_TEXT
         HALT
 
@@ -851,858 +902,903 @@ DISPLAY_STORE_DIGIT:
 STARTUP_BYTE_TABLE:
         DB $8D,$79,$00,$1F,$58,$6D,$EA,$C5,$2A,$48,$48,$47
         DB $47,$46,$46,$45,$45
+
 ; Initialize hardware and RAM before the game loop.
 STARTUP_INITIALIZE:
         CALL INITIALIZE_GAME_STATE
-        IN a,($02)
+        IN A,($02)
         AND $E0
         CP $E0
-        CALL z,CONVERT_DISPLAY_DIGITS
-        LD hl,$2002
-        LD a,$09
-        LD b,$00
+        CALL Z,CONVERT_DISPLAY_DIGITS
+        LD HL,$2002
+        LD A,$09
+        LD B,$00
+
 ; Startup clear ram loop.
 STARTUP_CLEAR_RAM_LOOP:
-        LD (hl),b
-        INC hl
-        DEC a
-        JP nz,STARTUP_CLEAR_RAM_LOOP
-        LD hl,$0929
-        LD ($2000),hl
+        LD (HL),B
+        INC HL
+        DEC A
+        JP NZ,STARTUP_CLEAR_RAM_LOOP
+        LD HL,$0929
+        LD ($2000),HL
         EI
-        LD hl,$0459
-        PUSH hl
+        LD HL,$0459
+        PUSH HL
 
 ; The 8080 command interpreter reads RAM $2000 and dispatches indexed words.
 
 ; Fetch indexed game command; zero uses frame-control path.
 GAME_COMMAND_DISPATCH:
-        LD hl,($2000)
-        LD a,(hl)
-        AND a
-        JP nz,GAME_COMMAND_INDEX
+        LD HL,($2000)
+        LD A,(HL)
+        AND A
+        JP NZ,GAME_COMMAND_INDEX
         CALL CLEAR_OBJECT_RECORD
         CALL GAME_CHECK_STATE_2020
         CALL GAME_CHECK_STATE_202A
-        LD a,($2002)
-        AND a
-        RET z
+        LD A,($2002)
+        AND A
+        RET Z
         CALL OBJECT_SEARCH_START
         CALL POLL_PLAYER_INPUT
         JP GAME_TIME_SERVICE
 
 ; Index the 16-bit native handler-address table.
 GAME_COMMAND_INDEX:
-        INC hl
-        EX de,hl
-        LD hl,$09E8
+        INC HL
+        EX DE,HL
+        LD HL,$09E8
         RLCA
-        LD c,a
-        LD b,$00
-        ADD hl,bc
-        LD a,(hl)
-        INC hl
-        LD h,(hl)
-        LD l,a
-        JP (hl)
+        LD C,A
+        LD B,$00
+        ADD HL,BC
+        LD A,(HL)
+        INC HL
+        LD H,(HL)
+        LD L,A
+        JP (HL)
 
 ; Game-time service and threshold test.
 GAME_TIME_SERVICE:
-        LD a,($2003)
+        LD A,($2003)
         CP $1D
-        RET m
-        LD bc,$2002
-        LD de,$21E9
+        RET M
+        LD BC,$2002
+        LD DE,$21E9
         CALL OBJECT_EXTRACT_FIELD_BITS
-        EX de,hl
+        EX DE,HL
         CALL TEST_OBJECT_FLAGS
-        INC hl
-        LD (hl),$2C
-        INC hl
-        EX de,hl
-        LD bc,$202B
+        INC HL
+        LD (HL),$2C
+        INC HL
+        EX DE,HL
+        LD BC,$202B
         CALL OBJECT_EXTRACT_FIELD_BITS
-        EX de,hl
+        EX DE,HL
         CALL TEST_OBJECT_FLAGS
-        INC hl
-        LD (hl),$30
-        INC hl
-        LD (hl),$30
-        LD hl,$21E9
-        LD de,$3E2F
-        LD a,$06
+        INC HL
+        LD (HL),$30
+        INC HL
+        LD (HL),$30
+        LD HL,$21E9
+        LD DE,$3E2F
+        LD A,$06
         JP RENDER_GAME_TEXT
+
 ; game check state 202a; internal branch at $04BF.
 GAME_CHECK_STATE_202A:
-        LD hl,$202A
-        LD a,(hl)
-        AND a
-        RET z
-        LD (hl),$00
-        LD hl,$09A6
-        LD ($2000),hl
+        LD HL,$202A
+        LD A,(HL)
+        AND A
+        RET Z
+        LD (HL),$00
+        LD HL,$09A6
+        LD ($2000),HL
         RET
+
 ; game check state 2020; internal branch at $04CE.
 GAME_CHECK_STATE_2020:
-        LD hl,$2020
-        LD a,(hl)
-        AND a
-        RET z
-        LD (hl),$00
+        LD HL,$2020
+        LD A,(HL)
+        AND A
+        RET Z
+        LD (HL),$00
         RRA
-        CALL c,RESET_SOUND_OUTPUTS
+        CALL C,RESET_SOUND_OUTPUTS
         RRA
-        CALL c,PROCESS_ACTIVE_GRAPHICS
+        CALL C,PROCESS_ACTIVE_GRAPHICS
         RRA
-        CALL c,GAME_PROCESS_STATE_2026
+        CALL C,GAME_PROCESS_STATE_2026
         RRA
-        CALL c,UPDATE_GAME_SOUND
+        CALL C,UPDATE_GAME_SOUND
         RRA
-        CALL c,GAME_CHECK_STATE_202D
+        CALL C,GAME_CHECK_STATE_202D
         RRA
-        CALL c,ADVANCE_GAME_SCRIPT_CURSOR
+        CALL C,ADVANCE_GAME_SCRIPT_CURSOR
         RRA
-        CALL c,SELECT_FOLLOWUP_GAME_SCRIPT
+        CALL C,SELECT_FOLLOWUP_GAME_SCRIPT
         RRA
-        CALL c,GAME_CHECK_STATE_202E
+        CALL C,GAME_CHECK_STATE_202E
         RET
+
 ; game process state 2026; internal branch at $04F7.
 GAME_PROCESS_STATE_2026:
-        PUSH af
-        LD hl,$2026
-        LD a,(hl)
-        AND a
-        JP z,GAME_STATE_SERVICE_RETURN
-        DEC (hl)
-        LD a,$04
-        OUT ($05),a
-        LD a,$19
-        LD ($2023),a
-        LD a,$0F
-        LD ($2025),a
+        PUSH AF
+        LD HL,$2026
+        LD A,(HL)
+        AND A
+        JP Z,GAME_STATE_SERVICE_RETURN
+        DEC (HL)
+        LD A,$04
+        OUT ($05),A
+        LD A,$19
+        LD ($2023),A
+        LD A,$0F
+        LD ($2025),A
+
 ; Game state service return.
 GAME_STATE_SERVICE_RETURN:
-        POP af
+        POP AF
         RET
+
 ; game check state 202e; internal branch at $0511.
 GAME_CHECK_STATE_202E:
-        LD hl,$202E
-        LD a,(hl)
-        AND a
-        JP nz,GAME_SELECT_RECORD_START
-        LD (hl),$01
-        LD a,($2007)
+        LD HL,$202E
+        LD A,(HL)
+        AND A
+        JP NZ,GAME_SELECT_RECORD_START
+        LD (HL),$01
+        LD A,($2007)
         RRCA
         AND $70
-        JP z,GAME_SELECT_RECORD_START
-        ADD a,$09
-        LD hl,$202B
-        CP (hl)
-        JP nc,GAME_SELECT_RECORD_START
-        LD a,$20
-        LD ($2002),a
-        LD hl,$0F33
-        LD de,$3C03
-        LD a,$0C
+        JP Z,GAME_SELECT_RECORD_START
+        ADD A,$09
+        LD HL,$202B
+        CP (HL)
+        JP NC,GAME_SELECT_RECORD_START
+        LD A,$20
+        LD ($2002),A
+        LD HL,$0F33
+        LD DE,$3C03
+        LD A,$0C
         JP RENDER_GAME_TEXT
+
 ; Game select record start.
 GAME_SELECT_RECORD_START:
-        LD hl,$20C9
-        LD bc,$001E
+        LD HL,$20C9
+        LD BC,$001E
+
 ; Game select record next.
 GAME_SELECT_RECORD_NEXT:
-        ADD hl,bc
-        LD a,l
+        ADD HL,BC
+        LD A,L
         CP $5F
-        JP z,SELECT_INITIAL_GAME_SCRIPT
-        LD a,(hl)
-        AND a
-        JP p,GAME_SELECT_RECORD_NEXT
-        XOR a
-        LD ($2021),a
-        LD ($202D),a
-        LD a,$01
-        LD ($2002),a
+        JP Z,SELECT_INITIAL_GAME_SCRIPT
+        LD A,(HL)
+        AND A
+        JP P,GAME_SELECT_RECORD_NEXT
+        XOR A
+        LD ($2021),A
+        LD ($202D),A
+        LD A,$01
+        LD ($2002),A
         RET
 
 ; Point the game-program cursor at the initial script.
 SELECT_INITIAL_GAME_SCRIPT:
-        LD hl,$0929
-        LD ($2000),hl
-        LD a,($202B)
-        LD hl,$2006
-        CP (hl)
-        RET c
-        LD (hl),a
+        LD HL,$0929
+        LD ($2000),HL
+        LD A,($202B)
+        LD HL,$2006
+        CP (HL)
+        RET C
+        LD (HL),A
         RET
 
 ; Select follow-up interpreted command stream.
 SELECT_FOLLOWUP_GAME_SCRIPT:
-        LD hl,$0963
-        LD ($2000),hl
+        LD HL,$0963
+        LD ($2000),HL
         RET
 
 ; Advance game-program cursor by one byte.
 ADVANCE_GAME_SCRIPT_CURSOR:
-        LD hl,($2000)
-        INC hl
-        LD ($2000),hl
+        LD HL,($2000)
+        INC HL
+        LD ($2000),HL
         RET
-        RET z
-        LD a,($2002)
-        AND a
-        RET z
-        LD a,($2021)
-        AND a
-        RET nz
-        LD hl,$202D
-        LD a,(hl)
+        RET Z
+        LD A,($2002)
+        AND A
+        RET Z
+        LD A,($2021)
+        AND A
+        RET NZ
+        LD HL,$202D
+        LD A,(HL)
         AND $1F
-        RET z
-        LD a,(hl)
+        RET Z
+        LD A,(HL)
         AND $0F
         RRA
-        LD b,$20
-        AND a
-        JP z,GAME_UPDATE_OUTPUT_LATCH
-        LD b,$10
+        LD B,$20
+        AND A
+        JP Z,GAME_UPDATE_OUTPUT_LATCH
+        LD B,$10
+
 ; Game update output latch.
 GAME_UPDATE_OUTPUT_LATCH:
-        OR b
-        LD (hl),a
-        OUT ($02),a
-        LD hl,$2021
-        LD (hl),$08
+        OR B
+        LD (HL),A
+        OUT ($02),A
+        LD HL,$2021
+        LD (HL),$08
         AND $10
-        JP nz,GAME_SET_SOUND_TIMER
-        LD (hl),$3C
+        JP NZ,GAME_SET_SOUND_TIMER
+        LD (HL),$3C
+
 ; Game set sound timer.
 GAME_SET_SOUND_TIMER:
-        LD a,$02
-        OUT ($05),a
-        LD a,$0F
-        LD ($2025),a
-        LD hl,$20C9
-        LD de,$001E
+        LD A,$02
+        OUT ($05),A
+        LD A,$0F
+        LD ($2025),A
+        LD HL,$20C9
+        LD DE,$001E
+
 ; Game scan records.
 GAME_SCAN_RECORDS:
-        ADD hl,de
-        LD a,(hl)
-        AND a
-        JP m,GAME_SCAN_RECORDS
-        LD de,$0008
-        ADD hl,de
-        LD (hl),$0E
-        DEC hl
-        LD (hl),$75
-        DEC hl
-        LD (hl),$9C
-        DEC hl
-        LD (hl),$E0
-        DEC hl
-        LD (hl),$FA
-        DEC hl
-        DEC hl
-        LD de,$0F5E
-        EX de,hl
-        LD a,($2008)
+        ADD HL,DE
+        LD A,(HL)
+        AND A
+        JP M,GAME_SCAN_RECORDS
+        LD DE,$0008
+        ADD HL,DE
+        LD (HL),$0E
+        DEC HL
+        LD (HL),$75
+        DEC HL
+        LD (HL),$9C
+        DEC HL
+        LD (HL),$E0
+        DEC HL
+        LD (HL),$FA
+        DEC HL
+        DEC HL
+        LD DE,$0F5E
+        EX DE,HL
+        LD A,($2008)
         AND $1F
-        LD c,a
-        LD b,$00
-        ADD hl,bc
-        LD a,(hl)
-        EX de,hl
-        LD (hl),a
-        DEC hl
-        LD (hl),$00
-        DEC hl
-        LD (hl),$C0
+        LD C,A
+        LD B,$00
+        ADD HL,BC
+        LD A,(HL)
+        EX DE,HL
+        LD (HL),A
+        DEC HL
+        LD (HL),$00
+        DEC HL
+        LD (HL),$C0
         RET
+
 ; game check state 202d; internal branch at $05E9.
 GAME_CHECK_STATE_202D:
-        PUSH af
-        LD hl,$202D
-        LD a,(hl)
+        PUSH AF
+        LD HL,$202D
+        LD A,(HL)
         AND $10
-        JP nz,GAME_STATE_RESTORE_ACC
-        LD a,$1F
-        OUT ($02),a
-        LD (hl),a
-        LD a,$08
-        OUT ($05),a
+        JP NZ,GAME_STATE_RESTORE_ACC
+        LD A,$1F
+        OUT ($02),A
+        LD (HL),A
+        LD A,$08
+        OUT ($05),A
         CALL UPDATE_SCORE_DIFFICULTY
+
 ; Game state restore acc.
 GAME_STATE_RESTORE_ACC:
-        POP af
+        POP AF
         RET
 
 ; Clear discrete sound output ports.
 RESET_SOUND_OUTPUTS:
-        PUSH af
-        XOR a
-        OUT ($05),a
-        OUT ($01),a
-        LD a,($202D)
-        OUT ($02),a
-        POP af
+        PUSH AF
+        XOR A
+        OUT ($05),A
+        OUT ($01),A
+        LD A,($202D)
+        OUT ($02),A
+        POP AF
         RET
 
 ; Scan active graphic records.
 PROCESS_ACTIVE_GRAPHICS:
-        PUSH af
-        LD hl,$21F0
+        PUSH AF
+        LD HL,$21F0
+
 ; Graphics scan active entry.
 GRAPHICS_SCAN_ACTIVE_ENTRY:
-        LD a,(hl)
-        AND a
-        JP z,GRAPHICS_SCAN_RETURN
-        LD (hl),$00
-        INC hl
-        LD d,a
-        LD e,(hl)
-        LD (hl),$00
-        INC hl
+        LD A,(HL)
+        AND A
+        JP Z,GRAPHICS_SCAN_RETURN
+        LD (HL),$00
+        INC HL
+        LD D,A
+        LD E,(HL)
+        LD (HL),$00
+        INC HL
         CP $2C
-        LD bc,$0A03
-        JP c,GRAPHICS_SCAN_NEXT_ENTRY
-        LD bc,$2005
+        LD BC,$0A03
+        JP C,GRAPHICS_SCAN_NEXT_ENTRY
+        LD BC,$2005
+
 ; Graphics scan next entry.
 GRAPHICS_SCAN_NEXT_ENTRY:
-        EX de,hl
+        EX DE,HL
         CALL CLEAR_GRAPHIC_BLOCK
-        EX de,hl
+        EX DE,HL
         JP GRAPHICS_SCAN_ACTIVE_ENTRY
+
 ; Graphics scan return.
 GRAPHICS_SCAN_RETURN:
-        POP af
+        POP AF
         RET
 
 ; Update discrete sound settings.
 UPDATE_GAME_SOUND:
-        PUSH af
-        LD a,($2003)
+        PUSH AF
+        LD A,($2003)
         AND $0F
         OR $50
-        LD ($2022),a
-        LD bc,$2029
-        LD a,(bc)
-        INC a
+        LD ($2022),A
+        LD BC,$2029
+        LD A,(BC)
+        INC A
         CP $07
-        JP nz,SOUND_STORE_RECORD_BYTE
-        XOR a
+        JP NZ,SOUND_STORE_RECORD_BYTE
+        XOR A
+
 ; Sound store record byte.
 SOUND_STORE_RECORD_BYTE:
-        LD (bc),a
-        LD hl,$0FDE
-        ADD a,l
-        LD l,a
-        LD a,(hl)
-        LD b,a
+        LD (BC),A
+        LD HL,$0FDE
+        ADD A,L
+        LD L,A
+        LD A,(HL)
+        LD B,A
         CP $06
-        JP nz,SELECT_OBJECT_RECORD
-        LD a,$04
-        OUT ($05),a
-        LD a,$19
-        LD ($2023),a
-        LD a,$02
-        LD ($2026),a
-        LD a,$0F
-        LD ($2025),a
-        LD a,b
+        JP NZ,SELECT_OBJECT_RECORD
+        LD A,$04
+        OUT ($05),A
+        LD A,$19
+        LD ($2023),A
+        LD A,$02
+        LD ($2026),A
+        LD A,$0F
+        LD ($2025),A
+        LD A,B
 
 ; Select one object record using a fixed stride.
 SELECT_OBJECT_RECORD:
-        LD hl,$202C
-        LD de,$000D
+        LD HL,$202C
+        LD DE,$000D
+
 ; Object select next stride.
 OBJECT_SELECT_NEXT_STRIDE:
-        ADD hl,de
-        DEC a
-        JP nz,OBJECT_SELECT_NEXT_STRIDE
-        LD a,b
-        EX de,hl
-        LD hl,$201E
-        LD a,(hl)
-        INC (hl)
-        LD hl,$0F7E
+        ADD HL,DE
+        DEC A
+        JP NZ,OBJECT_SELECT_NEXT_STRIDE
+        LD A,B
+        EX DE,HL
+        LD HL,$201E
+        LD A,(HL)
+        INC (HL)
+        LD HL,$0F7E
         RRA
-        JP nc,OBJECT_INDEX_ROTATE
-        LD hl,$0FAE
-        LD a,b
+        JP NC,OBJECT_INDEX_ROTATE
+        LD HL,$0FAE
+        LD A,B
         OR $10
-        LD b,a
+        LD B,A
+
 ; Object index rotate.
 OBJECT_INDEX_ROTATE:
-        LD a,b
-        DEC a
+        LD A,B
+        DEC A
         RLCA
         RLCA
         RLCA
         AND $38
-        ADD a,l
-        LD l,a
-        LD c,$08
+        ADD A,L
+        LD L,A
+        LD C,$08
 
 ; Copy bytes into an object record.
 COPY_OBJECT_RECORD:
-        LD a,(hl)
-        INC hl
-        LD (de),a
-        DEC de
-        DEC c
-        JP nz,COPY_OBJECT_RECORD
-        LD a,b
+        LD A,(HL)
+        INC HL
+        LD (DE),A
+        DEC DE
+        DEC C
+        JP NZ,COPY_OBJECT_RECORD
+        LD A,B
         OR $C0
-        LD (de),a
-        POP af
+        LD (DE),A
+        POP AF
         RET
 
 ; Clear a selected object record.
 CLEAR_OBJECT_RECORD:
-        LD hl,$21C1
+        LD HL,$21C1
+
 ; Object clear if active.
 OBJECT_CLEAR_IF_ACTIVE:
-        LD a,(hl)
-        AND a
-        RET z
-        LD (hl),$00
-        INC hl
-        LD d,(hl)
-        PUSH hl
-        LD hl,$2024
-        LD bc,$000D
+        LD A,(HL)
+        AND A
+        RET Z
+        LD (HL),$00
+        INC HL
+        LD D,(HL)
+        PUSH HL
+        LD HL,$2024
+        LD BC,$000D
+
 ; Object offset accumulate.
 OBJECT_OFFSET_ACCUMULATE:
-        ADD hl,bc
-        DEC a
-        JP nz,OBJECT_OFFSET_ACCUMULATE
-        LD bc,$0008
-        ADD hl,bc
-        LD (hl),$0E
-        DEC hl
-        LD (hl),$55
-        DEC hl
-        DEC hl
-        DEC hl
-        LD (hl),$01
-        DEC hl
-        DEC hl
-        LD (hl),d
-        DEC hl
-        LD (hl),$00
-        DEC hl
-        LD b,(hl)
-        LD (hl),$E0
-        LD a,($2002)
-        AND a
-        JP nz,OBJECT_LOOKUP_INDEX
-        POP hl
+        ADD HL,BC
+        DEC A
+        JP NZ,OBJECT_OFFSET_ACCUMULATE
+        LD BC,$0008
+        ADD HL,BC
+        LD (HL),$0E
+        DEC HL
+        LD (HL),$55
+        DEC HL
+        DEC HL
+        DEC HL
+        LD (HL),$01
+        DEC HL
+        DEC HL
+        LD (HL),D
+        DEC HL
+        LD (HL),$00
+        DEC HL
+        LD B,(HL)
+        LD (HL),$E0
+        LD A,($2002)
+        AND A
+        JP NZ,OBJECT_LOOKUP_INDEX
+        POP HL
         RET
+
 ; Object lookup index.
 OBJECT_LOOKUP_INDEX:
-        LD a,b
-        LD bc,$0F57
+        LD A,B
+        LD BC,$0F57
         AND $07
-        ADD a,c
-        LD c,a
-        LD de,$21E9
+        ADD A,C
+        LD C,A
+        LD DE,$21E9
         CALL OBJECT_EXTRACT_FIELD_BITS
-        LD a,$30
-        LD (de),a
-        INC de
-        LD (de),a
-        LD a,(bc)
-        LD hl,$202B
-        ADD a,(hl)
+        LD A,$30
+        LD (DE),A
+        INC DE
+        LD (DE),A
+        LD A,(BC)
+        LD HL,$202B
+        ADD A,(HL)
         DAA
-        LD (hl),a
-        POP hl
-        LD c,(hl)
-        INC hl
-        LD b,(hl)
-        INC hl
-        PUSH hl
-        LD a,b
-        ADD a,$20
-        LD hl,$09C2
-        JP c,OBJECT_COORDINATE_SHIFT_LEFT
-        LD hl,$09BA
+        LD (HL),A
+        POP HL
+        LD C,(HL)
+        INC HL
+        LD B,(HL)
+        INC HL
+        PUSH HL
+        LD A,B
+        ADD A,$20
+        LD HL,$09C2
+        JP C,OBJECT_COORDINATE_SHIFT_LEFT
+        LD HL,$09BA
+
 ; Object coordinate shift left.
 OBJECT_COORDINATE_SHIFT_LEFT:
-        LD a,c
+        LD A,C
         RLCA
         RLCA
         RLCA
         AND $07
-        ADD a,l
-        LD l,a
-        LD a,(hl)
-        OUT ($01),a
-        LD a,$01
-        OUT ($05),a
-        LD a,$1E
-        LD ($2025),a
-        LD a,b
-        LD d,$24
-        ADD a,$20
-        JP m,OBJECT_COORDINATE_SHIFT_RIGHT
-        LD d,$28
+        ADD A,L
+        LD L,A
+        LD A,(HL)
+        OUT ($01),A
+        LD A,$01
+        OUT ($05),A
+        LD A,$1E
+        LD ($2025),A
+        LD A,B
+        LD D,$24
+        ADD A,$20
+        JP M,OBJECT_COORDINATE_SHIFT_RIGHT
+        LD D,$28
+
 ; Object coordinate shift right.
 OBJECT_COORDINATE_SHIFT_RIGHT:
-        LD a,c
+        LD A,C
         RRCA
         RRCA
         RRCA
         AND $1F
-        JP z,OBJECT_COORDINATE_LIMIT
-        DEC a
+        JP Z,OBJECT_COORDINATE_LIMIT
+        DEC A
+
 ; Object coordinate limit.
 OBJECT_COORDINATE_LIMIT:
         CP $1E
-        JP nz,OBJECT_SET_ACTIVE_COORDINATE
-        DEC a
+        JP NZ,OBJECT_SET_ACTIVE_COORDINATE
+        DEC A
+
 ; Object set active coordinate.
 OBJECT_SET_ACTIVE_COORDINATE:
         OR $A0
-        LD e,a
+        LD E,A
         CALL SEARCH_ACTIVE_OBJECTS
-        LD a,$2D
-        LD ($2024),a
-        LD hl,$21EA
-        LD a,$03
+        LD A,$2D
+        LD ($2024),A
+        LD HL,$21EA
+        LD A,$03
         CALL RENDER_GAME_TEXT
-        POP hl
+        POP HL
         JP OBJECT_CLEAR_IF_ACTIVE
+
 ; Object search start.
 OBJECT_SEARCH_START:
-        LD hl,$21A3
+        LD HL,$21A3
+
 ; Object search next.
 OBJECT_SEARCH_NEXT:
-        LD a,(hl)
-        AND a
-        RET z
-        INC hl
-        ADD a,$10
+        LD A,(HL)
+        AND A
+        RET Z
+        INC HL
+        ADD A,$10
         RLCA
         RLCA
         RLCA
         AND $07
-        LD de,$2067
-        LD bc,$000D
-        EX de,hl
+        LD DE,$2067
+        LD BC,$000D
+        EX DE,HL
+
 ; Object search advance offset.
 OBJECT_SEARCH_ADVANCE_OFFSET:
-        ADD hl,bc
-        ADD hl,bc
-        DEC a
-        JP nz,OBJECT_SEARCH_ADVANCE_OFFSET
-        LD a,(de)
+        ADD HL,BC
+        ADD HL,BC
+        DEC A
+        JP NZ,OBJECT_SEARCH_ADVANCE_OFFSET
+        LD A,(DE)
         SUB $08
-        SUB (hl)
+        SUB (HL)
         CP $EC
-        JP nc,OBJECT_MARK_RECORD_INACTIVE
-        ADD hl,bc
+        JP NC,OBJECT_MARK_RECORD_INACTIVE
+        ADD HL,BC
+
 ; Object mark record inactive.
 OBJECT_MARK_RECORD_INACTIVE:
-        DEC hl
-        DEC hl
-        LD (hl),$00
-        EX de,hl
-        DEC hl
-        LD a,(hl)
-        ADD a,$30
+        DEC HL
+        DEC HL
+        LD (HL),$00
+        EX DE,HL
+        DEC HL
+        LD A,(HL)
+        ADD A,$30
         AND $F0
-        LD d,a
-        LD (hl),$00
-        INC hl
-        LD e,(hl)
-        INC hl
-        PUSH hl
+        LD D,A
+        LD (HL),$00
+        INC HL
+        LD E,(HL)
+        INC HL
+        PUSH HL
         CALL BIT_SHIFT_SETUP
-        LD a,e
+        LD A,E
         AND $1F
-        JP z,OBJECT_RESOLVE_SCAN_ENTRY
-        DEC a
-        JP z,OBJECT_RESOLVE_SCAN_ENTRY
+        JP Z,OBJECT_RESOLVE_SCAN_ENTRY
+        DEC A
+        JP Z,OBJECT_RESOLVE_SCAN_ENTRY
+
 ; Object adjust scan index.
 OBJECT_ADJUST_SCAN_INDEX:
-        DEC a
+        DEC A
         CP $1C
-        JP p,OBJECT_ADJUST_SCAN_INDEX
+        JP P,OBJECT_ADJUST_SCAN_INDEX
+
 ; Object resolve scan entry.
 OBJECT_RESOLVE_SCAN_ENTRY:
-        LD e,a
+        LD E,A
         CALL SEARCH_ACTIVE_OBJECTS
-        LD b,d
-        INC b
-        INC b
-        LD c,e
-        INC c
-        PUSH bc
-        LD a,e
-        ADD a,$60
-        LD e,a
-        PUSH de
-        LD b,d
-        INC c
-        PUSH bc
-        LD a,$1E
-        LD ($2025),a
-        LD a,$0F
-        LD ($2024),a
-        LD a,$10
-        OUT ($05),a
-        LD a,e
+        LD B,D
+        INC B
+        INC B
+        LD C,E
+        INC C
+        PUSH BC
+        LD A,E
+        ADD A,$60
+        LD E,A
+        PUSH DE
+        LD B,D
+        INC C
+        PUSH BC
+        LD A,$1E
+        LD ($2025),A
+        LD A,$0F
+        LD ($2024),A
+        LD A,$10
+        OUT ($05),A
+        LD A,E
         AND $02
-        LD hl,$0F40
-        ADD a,l
-        LD l,a
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        EX de,hl
-        POP de
-        LD a,(hl)
-        INC hl
+        LD HL,$0F40
+        ADD A,L
+        LD L,A
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        EX DE,HL
+        POP DE
+        LD A,(HL)
+        INC HL
         CALL RENDER_GAME_TEXT
-        POP de
-        LD a,(hl)
-        INC hl
+        POP DE
+        LD A,(HL)
+        INC HL
         CALL RENDER_GAME_TEXT
-        POP de
-        LD hl,$0EB5
-        LD a,$03
+        POP DE
+        LD HL,$0EB5
+        LD A,$03
         CALL RENDER_GAME_TEXT
-        POP hl
+        POP HL
         JP OBJECT_SEARCH_NEXT
 
 ; Find a matching active object.
 SEARCH_ACTIVE_OBJECTS:
-        LD hl,$21F0
+        LD HL,$21F0
+
 ; Active object compare fields.
 ACTIVE_OBJECT_COMPARE_FIELDS:
-        LD a,(hl)
-        INC hl
-        OR (hl)
-        INC hl
-        JP nz,ACTIVE_OBJECT_COMPARE_FIELDS
-        DEC hl
-        LD (hl),e
-        DEC hl
-        LD (hl),d
+        LD A,(HL)
+        INC HL
+        OR (HL)
+        INC HL
+        JP NZ,ACTIVE_OBJECT_COMPARE_FIELDS
+        DEC HL
+        LD (HL),E
+        DEC HL
+        LD (HL),D
         RET
 
 ; Derive gameplay difficulty from score state.
 UPDATE_SCORE_DIFFICULTY:
-        LD a,($202B)
+        LD A,($202B)
         CP $40
-        JP c,SCORE_OBJECT_SCAN_SETUP
-        LD a,$39
+        JP C,SCORE_OBJECT_SCAN_SETUP
+        LD A,$39
+
 ; Score object scan setup.
 SCORE_OBJECT_SCAN_SETUP:
-        LD ($202C),a
-        LD hl,$207F
-        LD de,$5050
+        LD ($202C),A
+        LD HL,$207F
+        LD DE,$5050
+
 ; Score object scan next.
 SCORE_OBJECT_SCAN_NEXT:
-        LD a,(hl)
-        AND a
-        JP m,SCORE_OBJECT_PROCESS_ACTIVE
+        LD A,(HL)
+        AND A
+        JP M,SCORE_OBJECT_PROCESS_ACTIVE
+
 ; Score object update record.
 SCORE_OBJECT_UPDATE_RECORD:
-        LD bc,$0008
-        ADD hl,bc
-        LD (hl),$0E
-        DEC hl
-        LD (hl),$A3
-        DEC hl
-        DEC hl
-        LD (hl),e
-        DEC hl
-        LD (hl),b
-        DEC hl
-        DEC hl
-        LD (hl),d
-        DEC hl
-        LD (hl),$01
-        DEC hl
-        LD (hl),$80
-        LD a,d
-        ADD a,$51
-        LD d,a
+        LD BC,$0008
+        ADD HL,BC
+        LD (HL),$0E
+        DEC HL
+        LD (HL),$A3
+        DEC HL
+        DEC HL
+        LD (HL),E
+        DEC HL
+        LD (HL),B
+        DEC HL
+        DEC HL
+        LD (HL),D
+        DEC HL
+        LD (HL),$01
+        DEC HL
+        LD (HL),$80
+        LD A,D
+        ADD A,$51
+        LD D,A
         RRA
-        JP c,SCORE_OBJECT_NEXT_RECORD
-        LD a,($202C)
+        JP C,SCORE_OBJECT_NEXT_RECORD
+        LD A,($202C)
         SUB $10
-        RET m
-        LD ($202C),a
-        LD a,e
-        ADD a,$20
-        LD e,a
+        RET M
+        LD ($202C),A
+        LD A,E
+        ADD A,$20
+        LD E,A
+
 ; Score object next record.
 SCORE_OBJECT_NEXT_RECORD:
-        LD bc,$000D
-        ADD hl,bc
+        LD BC,$000D
+        ADD HL,BC
         JP SCORE_OBJECT_SCAN_NEXT
+
 ; Score object process active.
 SCORE_OBJECT_PROCESS_ACTIVE:
-        PUSH hl
-        PUSH de
-        INC hl
-        INC hl
-        LD e,(hl)
-        INC hl
-        INC hl
-        INC hl
-        LD d,(hl)
+        PUSH HL
+        PUSH DE
+        INC HL
+        INC HL
+        LD E,(HL)
+        INC HL
+        INC HL
+        INC HL
+        LD D,(HL)
         CALL BIT_SHIFT_SETUP
-        EX de,hl
-        LD bc,$1002
+        EX DE,HL
+        LD BC,$1002
         CALL CLEAR_GRAPHIC_BLOCK
-        POP de
-        POP hl
+        POP DE
+        POP HL
         JP SCORE_OBJECT_UPDATE_RECORD
-        RET z
-        XOR a
-        LD ($2006),a
-        LD a,($2010)
-        AND a
-        RET z
-        LD hl,$21E9
-        PUSH hl
-        LD bc,$0430
+        RET Z
+        XOR A
+        LD ($2006),A
+        LD A,($2010)
+        AND A
+        RET Z
+        LD HL,$21E9
+        PUSH HL
+        LD BC,$0430
+
 ; Score fill bytes loop.
 SCORE_FILL_BYTES_LOOP:
-        LD (hl),c
-        INC hl
-        DEC b
-        JP nz,SCORE_FILL_BYTES_LOOP
-        POP hl
-        LD de,$3E25
-        LD a,$04
+        LD (HL),C
+        INC HL
+        DEC B
+        JP NZ,SCORE_FILL_BYTES_LOOP
+        POP HL
+        LD DE,$3E25
+        LD A,$04
         JP RENDER_GAME_TEXT
-        EX de,hl
-        LD ($2000),hl
-        LD a,($2003)
+        EX DE,HL
+        LD ($2000),HL
+        LD A,($2003)
         AND $07
         CP $07
-        JP nz,SCORE_SAVE_RESULT
-        XOR a
+        JP NZ,SCORE_SAVE_RESULT
+        XOR A
+
 ; Score save result.
 SCORE_SAVE_RESULT:
-        LD ($2029),a
+        LD ($2029),A
         RET
 
 ; Reset game state and script pointer.
 RESET_GAME_STATE:
         DI
-        EX de,hl
-        LD ($2000),hl
-        XOR a
-        OUT ($02),a
-        OUT ($05),a
-        OUT ($01),a
-        POP hl
-        LD bc,$0000
-        LD de,$0000
-        LD a,$10
-        LD sp,$4010
+        EX DE,HL
+        LD ($2000),HL
+        XOR A
+        OUT ($02),A
+        OUT ($05),A
+        OUT ($01),A
+        POP HL
+        LD BC,$0000
+        LD DE,$0000
+        LD A,$10
+        LD SP,$4010
+
 ; Game reset copy loop.
 GAME_RESET_COPY_LOOP:
-        PUSH bc
-        INC de
-        CP d
-        JP nz,GAME_RESET_COPY_LOOP
-        LD sp,$2400
-        JP (hl)
+        PUSH BC
+        INC DE
+        CP D
+        JP NZ,GAME_RESET_COPY_LOOP
+        LD SP,$2400
+        JP (HL)
 
 ; Initialize RAM and launch the main control path.
 INITIALIZE_GAME_STATE:
-        POP hl
-        LD ($2009),hl
+        POP HL
+        LD ($2009),HL
         CALL RESET_GAME_STATE
-        LD hl,($2009)
-        PUSH hl
-        LD hl,$0F04
-        LD de,$27E0
-        LD a,$20
+        LD HL,($2009)
+        PUSH HL
+        LD HL,$0F04
+        LD DE,$27E0
+        LD A,$20
         JP RENDER_GAME_TEXT
 
 ; Poll player input port.
 POLL_PLAYER_INPUT:
-        IN a,($01)
-        LD b,a
-        IN a,($01)
-        LD hl,$2008
-        LD de,$09DA
-        CP b
-        CALL z,HANDLE_INPUT_CHANGE
+        IN A,($01)
+        LD B,A
+        IN A,($01)
+        LD HL,$2008
+        LD DE,$09DA
+        CP B
+        CALL Z,HANDLE_INPUT_CHANGE
         RET
-        RET z
-        LD a,$20
-        OUT ($05),a
-        LD a,$0F
-        LD ($2025),a
-        LD a,($2007)
-        LD b,a
-        LD hl,$2004
-        INC (hl)
+        RET Z
+        LD A,$20
+        OUT ($05),A
+        LD A,$0F
+        LD ($2025),A
+        LD A,($2007)
+        LD B,A
+        LD HL,$2004
+        INC (HL)
         AND $04
-        JP z,INPUT_STORE_EDGE_STATE
-        LD a,(hl)
+        JP Z,INPUT_STORE_EDGE_STATE
+        LD A,(HL)
         RRCA
-        RET c
+        RET C
+
 ; Input store edge state.
 INPUT_STORE_EDGE_STATE:
-        LD (hl),$00
-        INC hl
-        INC (hl)
-        LD a,b
+        LD (HL),$00
+        INC HL
+        INC (HL)
+        LD A,B
         AND $08
-        JP z,INPUT_MASK_CURRENT_NIBBLE
-        INC (hl)
-        LD a,b
+        JP Z,INPUT_MASK_CURRENT_NIBBLE
+        INC (HL)
+        LD A,B
         AND $04
-        JP z,INPUT_MASK_CURRENT_NIBBLE
-        INC (hl)
+        JP Z,INPUT_MASK_CURRENT_NIBBLE
+        INC (HL)
+
 ; Input mask current nibble.
 INPUT_MASK_CURRENT_NIBBLE:
-        LD a,(hl)
+        LD A,(HL)
         AND $0F
-        LD (hl),a
-        RET z
-        LD a,($2002)
-        AND a
-        RET nz
-        LD hl,$2005
-        LD a,(hl)
-        AND a
-        JP z,CHECK_COIN_INPUT
+        LD (HL),A
+        RET Z
+        LD A,($2002)
+        AND A
+        RET NZ
+        LD HL,$2005
+        LD A,(HL)
+        AND A
+        JP Z,CHECK_COIN_INPUT
+
 ; Input decrement timer.
 INPUT_DECREMENT_TIMER:
-        DEC (hl)
-        IN a,($01)
+        DEC (HL)
+        IN A,($01)
         RLCA
         RLCA
         AND $03
-        LD de,$0F54
-        ADD a,e
-        LD e,a
-        LD a,(de)
-        LD ($2002),a
-        LD ($202A),a
+        LD DE,$0F54
+        ADD A,E
+        LD E,A
+        LD A,(DE)
+        LD ($2002),A
+        LD ($202A),A
         RET
 
 ; Examine coin-input bits.
 CHECK_COIN_INPUT:
-        LD a,($2007)
+        LD A,($2007)
         AND $0C
         CP $0C
-        RET nz
-        DEC hl
-        LD a,(hl)
-        AND a
-        RET z
+        RET NZ
+        DEC HL
+        LD A,(HL)
+        AND A
+        RET Z
         JP INPUT_DECREMENT_TIMER
 
 ; Interpreted game command bytes and inline operands; not native opcodes.
@@ -1729,352 +1825,369 @@ GAME_SCRIPT_STREAMS:
 GAME_COMMAND_HANDLER_TABLE:
         DB $C7,$08,$7C,$0B,$72,$0B,$A2,$08,$22,$0B,$ED,$0A
         DB $86,$0B,$E1,$0A,$9F,$0A,$BC,$0A,$53,$0A,$6D,$08
+
 ; Set up bit-shift operands.
 BIT_SHIFT_SETUP:
-        LD a,e
+        LD A,E
         AND $07
-        LD c,a
-        LD b,$03
+        LD C,A
+        LD B,$03
+
 ; Shift setup next bit.
 SHIFT_SETUP_NEXT_BIT:
-        XOR a
-        LD a,d
+        XOR A
+        LD A,D
         RRA
-        LD d,a
-        LD a,e
+        LD D,A
+        LD A,E
         RRA
-        LD e,a
-        DEC b
-        JP nz,SHIFT_SETUP_NEXT_BIT
-        LD a,d
-        ADD a,$24
-        LD d,a
+        LD E,A
+        DEC B
+        JP NZ,SHIFT_SETUP_NEXT_BIT
+        LD A,D
+        ADD A,$24
+        LD D,A
         RET
 
 ; Copy object data to destination.
 COPY_OBJECT_BYTES:
-        PUSH af
-        LD a,(hl)
-        LD (bc),a
-        INC bc
-        EX de,hl
-        OR (hl)
-        INC hl
-        LD (de),a
-        POP af
-        PUSH hl
-        LD hl,$0020
-        ADD hl,de
-        POP de
-        DEC a
-        JP nz,COPY_OBJECT_BYTES
+        PUSH AF
+        LD A,(HL)
+        LD (BC),A
+        INC BC
+        EX DE,HL
+        OR (HL)
+        INC HL
+        LD (DE),A
+        POP AF
+        PUSH HL
+        LD HL,$0020
+        ADD HL,DE
+        POP DE
+        DEC A
+        JP NZ,COPY_OBJECT_BYTES
         RET
 
 ; Copy rectangular graphics bytes.
 COPY_GRAPHIC_BLOCK:
-        PUSH bc
-        PUSH hl
+        PUSH BC
+        PUSH HL
+
 ; Graphic copy byte loop.
 GRAPHIC_COPY_BYTE_LOOP:
-        LD a,(de)
-        INC de
-        LD (hl),a
-        INC hl
-        DEC c
-        JP nz,GRAPHIC_COPY_BYTE_LOOP
-        POP hl
-        LD bc,$0020
-        ADD hl,bc
-        POP bc
-        DEC b
-        JP nz,COPY_GRAPHIC_BLOCK
+        LD A,(DE)
+        INC DE
+        LD (HL),A
+        INC HL
+        DEC C
+        JP NZ,GRAPHIC_COPY_BYTE_LOOP
+        POP HL
+        LD BC,$0020
+        ADD HL,BC
+        POP BC
+        DEC B
+        JP NZ,COPY_GRAPHIC_BLOCK
         RET
 
 ; Clear rectangular graphics bytes.
 CLEAR_GRAPHIC_BLOCK:
-        XOR a
+        XOR A
+
 ; Graphic clear row begin.
 GRAPHIC_CLEAR_ROW_BEGIN:
-        PUSH bc
-        PUSH hl
+        PUSH BC
+        PUSH HL
+
 ; Graphic clear byte loop.
 GRAPHIC_CLEAR_BYTE_LOOP:
-        LD (hl),a
-        INC hl
-        DEC c
-        JP nz,GRAPHIC_CLEAR_BYTE_LOOP
-        POP hl
-        LD bc,$0020
-        ADD hl,bc
-        POP bc
-        DEC b
-        JP nz,GRAPHIC_CLEAR_ROW_BEGIN
+        LD (HL),A
+        INC HL
+        DEC C
+        JP NZ,GRAPHIC_CLEAR_BYTE_LOOP
+        POP HL
+        LD BC,$0020
+        ADD HL,BC
+        POP BC
+        DEC B
+        JP NZ,GRAPHIC_CLEAR_ROW_BEGIN
         RET
-        EX de,hl
-        LD c,(hl)
-        INC hl
-        LD b,(hl)
-        INC hl
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        DEC hl
+        EX DE,HL
+        LD C,(HL)
+        INC HL
+        LD B,(HL)
+        INC HL
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        DEC HL
         CALL OBJECT_EXTRACT_FIELD_BITS
-        EX de,hl
+        EX DE,HL
         CALL TEST_OBJECT_FLAGS
-        INC hl
-        EX de,hl
-        LD a,$30
-        LD (de),a
-        INC de
-        LD (de),a
+        INC HL
+        EX DE,HL
+        LD A,$30
+        LD (DE),A
+        INC DE
+        LD (DE),A
         CALL SCRIPT_READ_INLINE_ADDRESS
-        PUSH de
+        PUSH DE
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD ($2000),hl
-        POP hl
-        LD a,$04
+        LD ($2000),HL
+        POP HL
+        LD A,$04
         JP RENDER_GAME_TEXT
 
 ; Test object flag bits.
 TEST_OBJECT_FLAGS:
-        DEC hl
-        LD a,(hl)
+        DEC HL
+        LD A,(HL)
         AND $40
-        RET z
-        LD (hl),$30
+        RET Z
+        LD (HL),$30
         RET
+
 ; Object extract field bits.
 OBJECT_EXTRACT_FIELD_BITS:
-        LD a,(bc)
+        LD A,(BC)
         RRA
         RRA
         RRA
         RRA
         AND $0F
-        JP nz,CONVERT_SCORE_TO_DIGITS
-        LD a,$10
+        JP NZ,CONVERT_SCORE_TO_DIGITS
+        LD A,$10
 
 ; Convert score digits to display codes.
 CONVERT_SCORE_TO_DIGITS:
-        ADD a,$30
-        LD (de),a
-        INC de
-        LD a,(bc)
+        ADD A,$30
+        LD (DE),A
+        INC DE
+        LD A,(BC)
         AND $0F
-        JP nz,SCORE_STORE_SECOND_DIGIT
-        LD a,$10
+        JP NZ,SCORE_STORE_SECOND_DIGIT
+        LD A,$10
+
 ; Score store second digit.
 SCORE_STORE_SECOND_DIGIT:
-        ADD a,$30
-        LD (de),a
-        INC de
+        ADD A,$30
+        LD (DE),A
+        INC DE
         RET
-        EX de,hl
-        LD b,(hl)
-        INC hl
-        DEC b
-        DEC b
+        EX DE,HL
+        LD B,(HL)
+        INC HL
+        DEC B
+        DEC B
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD c,(hl)
-        INC hl
-        LD a,(hl)
-        INC hl
-        LD (de),a
-        DEC de
-        LD a,c
-        LD (de),a
-        DEC de
+        LD C,(HL)
+        INC HL
+        LD A,(HL)
+        INC HL
+        LD (DE),A
+        DEC DE
+        LD A,C
+        LD (DE),A
+        DEC DE
+
 ; Text copy buffer byte.
 TEXT_COPY_BUFFER_BYTE:
-        LD a,(hl)
-        INC hl
-        LD (de),a
-        DEC de
-        DEC b
-        JP nz,TEXT_COPY_BUFFER_BYTE
-        LD ($2000),hl
+        LD A,(HL)
+        INC HL
+        LD (DE),A
+        DEC DE
+        DEC B
+        JP NZ,TEXT_COPY_BUFFER_BYTE
+        LD ($2000),HL
         RET
-        EX de,hl
+        EX DE,HL
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD a,(de)
+        LD A,(DE)
         CALL SCRIPT_READ_INLINE_ADDRESS
-        PUSH de
+        PUSH DE
         CALL SCRIPT_READ_INLINE_ADDRESS
-        PUSH de
+        PUSH DE
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD ($2000),hl
-        EX de,hl
-        AND a
-        JP z,TEXT_RETURN_TO_HANDLER
-        EX (sp),hl
+        LD ($2000),HL
+        EX DE,HL
+        AND A
+        JP Z,TEXT_RETURN_TO_HANDLER
+        EX (SP),HL
+
 ; Text return to handler.
 TEXT_RETURN_TO_HANDLER:
-        POP hl
-        POP de
-        LD a,$0B
+        POP HL
+        POP DE
+        LD A,$0B
         JP RENDER_GAME_TEXT
+
 ; Script read inline address.
 SCRIPT_READ_INLINE_ADDRESS:
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        INC hl
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        INC HL
         RET
-        LD a,(de)
-        INC de
-        EX de,hl
-        LD c,(hl)
-        INC hl
-        LD b,(hl)
-        INC hl
-        LD ($2000),hl
-        LD (bc),a
+        LD A,(DE)
+        INC DE
+        EX DE,HL
+        LD C,(HL)
+        INC HL
+        LD B,(HL)
+        INC HL
+        LD ($2000),HL
+        LD (BC),A
         RET
-        EX de,hl
-        LD b,(hl)
-        INC hl
-        LD c,(hl)
-        INC hl
-        LD a,(hl)
-        INC hl
+        EX DE,HL
+        LD B,(HL)
+        INC HL
+        LD C,(HL)
+        INC HL
+        LD A,(HL)
+        INC HL
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD ($2000),hl
-        EX de,hl
-        LD (hl),$DB
-        INC hl
-        LD (hl),c
-        INC hl
-        LD (hl),$C9
-        DEC hl
-        DEC hl
-        JP (hl)
+        LD ($2000),HL
+        EX DE,HL
+        LD (HL),$DB
+        INC HL
+        LD (HL),C
+        INC HL
+        LD (HL),$C9
+        DEC HL
+        DEC HL
+        JP (HL)
 
 ; Handle a change on an input bit.
 HANDLE_INPUT_CHANGE:
-        XOR (hl)
-        RET z
-        LD c,a
-        LD b,$01
+        XOR (HL)
+        RET Z
+        LD C,A
+        LD B,$01
+
 ; Input scan next bit.
 INPUT_SCAN_NEXT_BIT:
-        LD a,c
+        LD A,C
         RRCA
-        JP c,INPUT_TOGGLE_SELECTED_BIT
-        LD c,a
-        LD a,b
+        JP C,INPUT_TOGGLE_SELECTED_BIT
+        LD C,A
+        LD A,B
         RLCA
-        LD b,a
-        INC de
-        INC de
+        LD B,A
+        INC DE
+        INC DE
         JP INPUT_SCAN_NEXT_BIT
+
 ; Input toggle selected bit.
 INPUT_TOGGLE_SELECTED_BIT:
-        LD a,b
-        XOR (hl)
-        LD (hl),a
-        AND b
-        EX de,hl
-        LD c,(hl)
-        INC hl
-        LD h,(hl)
-        LD l,c
-        JP (hl)
-        EX de,hl
-        LD a,(hl)
-        INC hl
+        LD A,B
+        XOR (HL)
+        LD (HL),A
+        AND B
+        EX DE,HL
+        LD C,(HL)
+        INC HL
+        LD H,(HL)
+        LD L,C
+        JP (HL)
+        EX DE,HL
+        LD A,(HL)
+        INC HL
         CALL SCRIPT_READ_INLINE_ADDRESS
-        PUSH de
+        PUSH DE
         CALL SCRIPT_READ_INLINE_ADDRESS
-        LD ($2000),hl
-        POP hl
+        LD ($2000),HL
+        POP HL
 
 ; Render an encoded text stream.
 RENDER_GAME_TEXT:
-        PUSH af
+        PUSH AF
+
 ; Text read encoded character.
 TEXT_READ_ENCODED_CHARACTER:
-        LD a,(hl)
-        INC hl
+        LD A,(HL)
+        INC HL
         SUB $30
-        JP p,SELECT_CHARACTER_GLYPH
-        LD b,a
+        JP P,SELECT_CHARACTER_GLYPH
+        LD B,A
+
 ; Text advance column.
 TEXT_ADVANCE_COLUMN:
-        INC e
-        LD a,e
+        INC E
+        LD A,E
         AND $1F
-        JP nz,TEXT_ADVANCE_ROW
-        INC d
-        INC d
+        JP NZ,TEXT_ADVANCE_ROW
+        INC D
+        INC D
+
 ; Text advance row.
 TEXT_ADVANCE_ROW:
-        INC b
-        JP nz,TEXT_ADVANCE_COLUMN
+        INC B
+        JP NZ,TEXT_ADVANCE_COLUMN
         JP TEXT_READ_ENCODED_CHARACTER
 
 ; Locate the character glyph bitmap.
 SELECT_CHARACTER_GLYPH:
-        PUSH hl
-        PUSH de
-        LD hl,$0B8F
-        JP z,COPY_CHARACTER_GLYPH
-        LD bc,$000A
+        PUSH HL
+        PUSH DE
+        LD HL,$0B8F
+        JP Z,COPY_CHARACTER_GLYPH
+        LD BC,$000A
+
 ; Text find glyph offset.
 TEXT_FIND_GLYPH_OFFSET:
-        ADD hl,bc
-        DEC a
-        JP nz,TEXT_FIND_GLYPH_OFFSET
+        ADD HL,BC
+        DEC A
+        JP NZ,TEXT_FIND_GLYPH_OFFSET
 
 ; Copy the character glyph to video RAM.
 COPY_CHARACTER_GLYPH:
-        EX de,hl
-        LD bc,$0020
-        LD a,$0A
+        EX DE,HL
+        LD BC,$0020
+        LD A,$0A
+
 ; Text draw glyph row.
 TEXT_DRAW_GLYPH_ROW:
-        PUSH af
-        LD a,(de)
-        INC de
-        LD (hl),a
-        ADD hl,bc
-        POP af
-        DEC a
-        JP nz,TEXT_DRAW_GLYPH_ROW
-        POP de
-        POP hl
-        INC de
-        POP af
-        DEC a
-        JP nz,RENDER_GAME_TEXT
+        PUSH AF
+        LD A,(DE)
+        INC DE
+        LD (HL),A
+        ADD HL,BC
+        POP AF
+        DEC A
+        JP NZ,TEXT_DRAW_GLYPH_ROW
+        POP DE
+        POP HL
+        INC DE
+        POP AF
+        DEC A
+        JP NZ,RENDER_GAME_TEXT
         RET
 
 ; Store next inline script byte at $2010.
 SCRIPT_STORE_STATE_2010:
-        EX de,hl
-        LD a,(hl)
-        INC hl
-        LD ($2000),hl
-        LD ($2010),a
+        EX DE,HL
+        LD A,(HL)
+        INC HL
+        LD ($2000),HL
+        LD ($2010),A
         RET
 
 ; Store next inline script byte at $2011.
 SCRIPT_STORE_STATE_2011:
-        EX de,hl
-        LD a,(hl)
-        INC hl
-        LD ($2000),hl
-        LD ($2011),a
+        EX DE,HL
+        LD A,(HL)
+        INC HL
+        LD ($2000),HL
+        LD ($2011),A
         RET
 
 ; Load little-endian inline jump target into script pointer.
 SCRIPT_JUMP_ABSOLUTE:
-        EX de,hl
-        LD e,(hl)
-        INC hl
-        LD d,(hl)
-        EX de,hl
-        LD ($2000),hl
+        EX DE,HL
+        LD E,(HL)
+        INC HL
+        LD D,(HL)
+        EX DE,HL
+        LD ($2000),HL
         RET
 
 ; Numeric font: 8x10 characters, ten bytes per glyph.
@@ -2216,6 +2329,7 @@ NUMERIC_FONT_TRAILER:
         DB $06
 
 ; ROM device sw0044.e — SHA-1 bd345dd72fed8ce15da76c381782b025f71b006f
+
 ; Original graphic header and leading pattern bytes.
 GRAPHICS_ASSET_ROM:
         DB $00,$00,$00,$00,$00,$00,$00,$30,$CD,$02,$00,$00
