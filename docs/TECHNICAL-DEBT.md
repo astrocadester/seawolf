@@ -10,3 +10,14 @@ Starting investigations, not assertions that this repository contains defects. P
 | ENG-004 | Audit required | Separate source audits, compiler builds, ROM integrity, MAME and real-hardware tests. |
 
 Close only with project evidence/commits. See ENGINEERING-RULES.md.
+
+## Sea Wolf reverse-engineering verification — 2026-11-21
+
+| ID | Status | Evidence / gate |
+| --- | --- | --- |
+| SW-RE-006 | Awaiting execution | Reassemble PR #3 with bundled `tools/zmac` v1.3 and verify four original SHA-1 values, using unmodified `build.sh`. |
+| SW-RE-007 | Awaiting execution | Exercise startup, input, gameplay, character and sprite drawing, scoring and sound in MAME. |
+| SW-RE-002 | Partial | Native table addresses established; handler-specific inline operand contracts require register tracing. |
+| SW-RE-003–005 | Partial / open | Resolve per-glyph, per-frame and per-descriptor graphic boundaries from native consumers. |
+
+These are evidence gates, not substitutes for original software. The inherited ENG items remain as originally recorded.
