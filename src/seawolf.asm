@@ -1,5 +1,5 @@
 ; Sea Wolf (1976) - native Intel 8080 game program, written in zmac Z80 assembly syntax
-; Version v20261030-0001
+; Version v20261121-0001
 ; Four original MAME ROMs sw0041.h / sw0042.g / sw0043.f / sw0044.e
 ; Assembles to one contiguous 4096-byte image at $0000-$0FFF.
 ; Byte authority: roms/original/seawolf.zip (MAME set 1).
@@ -8,7 +8,8 @@
 ; bytes rather than accepting a patched implementation as original.
 ; The script interpreter is at $045E; vector table begins at $09E8.
 ; Original algorithmic code is expressed with assembly mnemonics where
-; exact bytes match. Unknown/changed areas are explicitly DB data.
+; exact bytes match. DB preserves interpreter streams, font bitmaps,
+; graphic objects and byte-exact exceptions. These are not all instructions.
 
 PRGPTR EQU $2000
 GTIME EQU $2002
@@ -22,19 +23,31 @@ SHIP_TABLE EQU $0F7E
         ORG $0000
 
 ; ROM 1: sw0041.h ($0000-$03FF)
-L0000:
+
+; -----------------------------------------------------------------------------
+; RESET_ENTRY ($0000) - Reset entry and 8080 stack setup
+; -----------------------------------------------------------------------------
+RESET_ENTRY:
         nop                          ; $0000 : 00
         nop                          ; $0001 : 00
         ld sp,$2400                  ; $0002 : 31 00 24 | Stack pointer
         jp $043A                     ; $0005 : C3 3A 04 | Startup jump
-L0008:
+
+; -----------------------------------------------------------------------------
+; IRQ_VECTOR_08 ($0008) - Interrupt vector: save registers and enter object update
+; -----------------------------------------------------------------------------
+IRQ_VECTOR_08:
         push hl                      ; $0008 : E5
         push de                      ; $0009 : D5
         push bc                      ; $000A : C5
         push af                      ; $000B : F5
         jp $007E                     ; $000C : C3 7E 00
         nop                          ; $000F : 00
-L0010:
+
+; -----------------------------------------------------------------------------
+; IRQ_VECTOR_10 ($0010) - Interrupt vector: save registers and choose update phase
+; -----------------------------------------------------------------------------
+IRQ_VECTOR_10:
         push hl                      ; $0010 : E5
         push de                      ; $0011 : D5
         push bc                      ; $0012 : C5
@@ -84,7 +97,11 @@ L0062:
         call $0368                   ; $0062 : CD 68 03
         xor a                        ; $0065 : AF
         ld ($201F),a                 ; $0066 : 32 1F 20
-L0069:
+
+; -----------------------------------------------------------------------------
+; IRQ_INPUT_AND_RETURN ($0069) - Sample input port and restore interrupt context
+; -----------------------------------------------------------------------------
+IRQ_INPUT_AND_RETURN:
         in a,($02)                   ; $0069 : DB 02 | IN1
         ld b,a                       ; $006B : 47
         in a,($02)                   ; $006C : DB 02 | IN1
@@ -98,7 +115,11 @@ L0069:
         pop hl                       ; $007B : E1
         ei                           ; $007C : FB
         ret                          ; $007D : C9
-L007E:
+
+; -----------------------------------------------------------------------------
+; IRQ_OBJECT_UPDATE ($007E) - Update RAM-backed object descriptors during interrupt processing
+; -----------------------------------------------------------------------------
+IRQ_OBJECT_UPDATE:
         ld a,($201F)                 ; $007E : 3A 1F 20
         and a                        ; $0081 : A7
         jp nz,$0119                  ; $0082 : C2 19 01
@@ -186,7 +207,11 @@ L010A:
         jp nz,$00F1                  ; $0110 : C2 F1 00 | Loop back
         call $0331                   ; $0113 : CD 31 03
         jp $0069                     ; $0116 : C3 69 00 | End of interrupt routine
-L0119:
+
+; -----------------------------------------------------------------------------
+; IRQ_OBJECT_DRAW (IRQ_OBJECT_DRAW:19) - Draw active ship objects
+; -----------------------------------------------------------------------------
+IRQ_OBJECT_DRAW:
         ld hl,($201A)                ; $0119 : 2A 1A 20 | Ship 1 pointer
         call $030C                   ; $011C : CD 0C 03
         ld hl,($201A)                ; $011F : 2A 1A 20 | Ship 1 pointer
@@ -194,14 +219,22 @@ L0119:
         ld hl,($2018)                ; $0125 : 2A 18 20 | Ship 0 pointer
         call $013A                   ; $0128 : CD 3A 01
         jp $0069                     ; $012B : C3 69 00 | End of interrupt routine
-L012E:
+
+; -----------------------------------------------------------------------------
+; UPDATE_SELECTED_OBJECT (UPDATE_SELECTED_OBJECT:2E) - Update the selected active object
+; -----------------------------------------------------------------------------
+UPDATE_SELECTED_OBJECT:
         ld hl,($2014)                ; $012E : 2A 14 20
         ld a,(hl)                    ; $0131 : 7E
         and a                        ; $0132 : A7
         ret p                        ; $0133 : F0 | No sprite to update?
         call $0165                   ; $0134 : CD 65 01 | Update sprite
         jp $0192                     ; $0137 : C3 92 01
-L013A:
+
+; -----------------------------------------------------------------------------
+; UPDATE_SHIP_OBJECT (UPDATE_SHIP_OBJECT:3A) - Process a ship-object state field
+; -----------------------------------------------------------------------------
+UPDATE_SHIP_OBJECT:
         ld a,(hl)                    ; $013A : 7E
         and a                        ; $013B : A7
         ret p                        ; $013C : F0 | Return if b7 clear
@@ -230,7 +263,11 @@ L0145:
         pop hl                       ; $015F : E1
         out ($04),a                  ; $0160 : D3 04 | Update shift count
         jp $01B8                     ; $0162 : C3 B8 01
-L0165:
+
+; -----------------------------------------------------------------------------
+; PREPARE_SPRITE_COPY (PREPARE_SPRITE_COPY:65) - Read the object's graphic source and destination parameters
+; -----------------------------------------------------------------------------
+PREPARE_SPRITE_COPY:
         inc hl                       ; $0165 : 23
         inc hl                       ; $0166 : 23
         ld e,(hl)                    ; $0167 : 5E | LSB of loc + shift
@@ -269,7 +306,11 @@ L0165:
         ex de,hl                     ; $018F : EB | hl = screen loc
         pop de                       ; $0190 : D1 | de = sprite data in ROM
         ret                          ; $0191 : C9 | bc = bytes wide, pix high
-L0192:
+
+; -----------------------------------------------------------------------------
+; DRAW_SPRITE_NORMAL (DRAW_SPRITE_NORMAL:92) - Copy sprite bytes through the shifter path
+; -----------------------------------------------------------------------------
+DRAW_SPRITE_NORMAL:
         push bc                      ; $0192 : C5 | bc = bytes wide, pix high
         push hl                      ; $0193 : E5 | hl = screen loc
 L0194:
@@ -296,7 +337,11 @@ L0194:
         rra                          ; $01B3 : 1F
         jp c,$0192                   ; $01B4 : DA 92 01 | Not end of screen
         ret                          ; $01B7 : C9
-L01B8:
+
+; -----------------------------------------------------------------------------
+; DRAW_SPRITE_SHIFTED (DRAW_SPRITE_SHIFTED:B8) - Copy sprite bytes through the alternate shifted path
+; -----------------------------------------------------------------------------
+DRAW_SPRITE_SHIFTED:
         push bc                      ; $01B8 : C5
         push hl                      ; $01B9 : E5
 L01BA:
@@ -323,7 +368,11 @@ L01BA:
         rra                          ; $01D9 : 1F
         jp c,$01B8                   ; $01DA : DA B8 01 | Loop
         ret                          ; $01DD : C9
-L01DE:
+
+; -----------------------------------------------------------------------------
+; UPDATE_SHIP_DESCRIPTOR (UPDATE_SHIP_DESCRIPTOR:DE) - Advance and test ship descriptor
+; -----------------------------------------------------------------------------
+UPDATE_SHIP_DESCRIPTOR:
         ld a,(hl)                    ; $01DE : 7E
         and a                        ; $01DF : A7
         ret p                        ; $01E0 : F0 | High bit clear = inactive
@@ -414,7 +463,11 @@ L0247:
         ld (hl),a                    ; $024D : 77
         scf                          ; $024E : 37
         ret                          ; $024F : C9
-L0250:
+
+; -----------------------------------------------------------------------------
+; UPDATE_PROJECTILE_DESCRIPTOR ($0250) - Advance and test torpedo or mine descriptor
+; -----------------------------------------------------------------------------
+UPDATE_PROJECTILE_DESCRIPTOR:
         ld a,(hl)                    ; $0250 : 7E
         and a                        ; $0251 : A7
         ret p                        ; $0252 : F0
@@ -547,7 +600,11 @@ L0309:
         scf                          ; $0309 : 37
         pop hl                       ; $030A : E1
         ret                          ; $030B : C9
-L030C:
+
+; -----------------------------------------------------------------------------
+; CLEAR_ACTIVE_OBJECT ($030C) - Clear active-object display state
+; -----------------------------------------------------------------------------
+CLEAR_ACTIVE_OBJECT:
         ld a,(hl)                    ; $030C : 7E | X flags?
         and a                        ; $030D : A7
         ret p                        ; $030E : F0 | Return if high bit not set
@@ -575,7 +632,11 @@ L0319:
         rra                          ; $032C : 1F
         jp c,$0317                   ; $032D : DA 17 03 | Loop
         ret                          ; $0330 : C9
-L0331:
+
+; -----------------------------------------------------------------------------
+; ADVANCE_OBJECT_CURSOR ($0331) - Select the next active object descriptor
+; -----------------------------------------------------------------------------
+ADVANCE_OBJECT_CURSOR:
         ld hl,($2014)                ; $0331 : 2A 14 20
         ld b,$0A                     ; $0334 : 06 0A | Loop counter
         ld a,l                       ; $0336 : 7D
@@ -603,7 +664,11 @@ L034D:
         add a,(hl)                   ; $0358 : 86 | Add to X
         ld (hl),a                    ; $0359 : 77 | Store X
         ret                          ; $035A : C9
-L035B:
+
+; -----------------------------------------------------------------------------
+; LOAD_OBJECT_DRAW_PARAMETERS ($035B) - Load drawing parameters from an object record
+; -----------------------------------------------------------------------------
+LOAD_OBJECT_DRAW_PARAMETERS:
         ld de,$0009                  ; $035B : 11 09 00
         add hl,de                    ; $035E : 19
         ld e,(hl)                    ; $035F : 5E
@@ -615,7 +680,11 @@ L035B:
         ld b,(hl)                    ; $0365 : 46
         inc hl                       ; $0366 : 23
         ret                          ; $0367 : C9
-L0368:
+
+; -----------------------------------------------------------------------------
+; UPDATE_FRAME_TIMERS ($0368) - Update frame-related countdown state
+; -----------------------------------------------------------------------------
+UPDATE_FRAME_TIMERS:
         ld a,($2020)                 ; $0368 : 3A 20 20
         and a                        ; $036B : A7
         ret nz                       ; $036C : C0
@@ -651,7 +720,11 @@ L038E:
         call $03AE                   ; $03A7 : CD AE 03 | Handle $2025 timer d0
         ld ($2020),a                 ; $03AA : 32 20 20
         ret                          ; $03AD : C9
-L03AE:
+
+; -----------------------------------------------------------------------------
+; DECREMENT_TIMER_IF_ACTIVE ($03AE) - Decrement a nonzero countdown byte
+; -----------------------------------------------------------------------------
+DECREMENT_TIMER_IF_ACTIVE:
         ld a,(hl)                    ; $03AE : 7E
         and a                        ; $03AF : A7
         jp z,$03B8                   ; $03B0 : CA B8 03
@@ -663,7 +736,11 @@ L03B8:
         rla                          ; $03B9 : 17
         ld b,a                       ; $03BA : 47
         ret                          ; $03BB : C9
-L03BC:
+
+; -----------------------------------------------------------------------------
+; UPDATE_WAVE_PATTERN ($03BC) - Update wave/display pattern state
+; -----------------------------------------------------------------------------
+UPDATE_WAVE_PATTERN:
         ld bc,$2027                  ; $03BC : 01 27 20
         ld a,(bc)                    ; $03BF : 0A
         add a,$0A                    ; $03C0 : C6 0A | $00 -> $0A -> $14 -> $1E = $00
@@ -696,7 +773,11 @@ L03DF:
         cp $60                       ; $03E6 : FE 60
         jp nz,$03DF                  ; $03E8 : C2 DF 03 | Loop
         ret                          ; $03EB : C9
-L03EC:
+
+; -----------------------------------------------------------------------------
+; CONVERT_DISPLAY_DIGITS ($03EC) - Convert numeric state for display
+; -----------------------------------------------------------------------------
+CONVERT_DISPLAY_DIGITS:
         ld hl,$0000                  ; $03EC : 21 00 00 | Start address
         ld de,$0000                  ; $03EF : 11 00 00 | Offset 0
         ld c,$02                     ; $03F2 : 0E 02 | Until $200
@@ -735,9 +816,17 @@ L040E:
         ld a,$08                     ; $0423 : 3E 08
         call $0B30                   ; $0425 : CD 30 0B | Draw string hl @ de, length a
         halt                         ; $0428 : 76 | Stop!
-        DB $8D,$79,$00,$1F,$58,$6D,$EA,$C5,$2A,$48,$48,$47 ; $0429 raw original bytes
-        DB $47,$46,$46,$45,$45 ; $0435 raw original bytes
-L043A:
+
+; -----------------------------------------------------------------------------
+; STARTUP_BYTE_TABLE ($0429) - Startup data/constants adjacent to native initialization
+; -----------------------------------------------------------------------------
+STARTUP_BYTE_TABLE:
+        DB $8D,$79,$00,$1F,$58,$6D,$EA,$C5,$2A,$48,$48,$47 ; $0429 raw original bytes | byte-exact exception at code/data boundary
+        DB $47,$46,$46,$45,$45 ; $0435 raw original bytes | byte-exact exception at code/data boundary
+; -----------------------------------------------------------------------------
+; STARTUP_INITIALIZE ($043A) - Initialize hardware and RAM before the game loop
+; -----------------------------------------------------------------------------
+STARTUP_INITIALIZE:
         call $08A2                   ; $043A : CD A2 08 | (End of game routine)
         in a,($02)                   ; $043D : DB 02 | IN2
         and $E0                      ; $043F : E6 E0 | Test mode bits
@@ -758,7 +847,11 @@ L044D:
         push hl                      ; $045D : E5
 
 ; The 8080 command interpreter reads RAM $2000 and dispatches indexed words.
-L045E:
+
+; -----------------------------------------------------------------------------
+; GAME_COMMAND_DISPATCH ($045E) - Fetch indexed game command; zero uses frame-control path
+; -----------------------------------------------------------------------------
+GAME_COMMAND_DISPATCH:
         ld hl,($2000)                ; $045E : 2A 00 20
         ld a,(hl)                    ; $0461 : 7E
         and a                        ; $0462 : A7
@@ -772,7 +865,11 @@ L045E:
         call $074C                   ; $0474 : CD 4C 07
         call $08B8                   ; $0477 : CD B8 08
         jp $048C                     ; $047A : C3 8C 04
-L047D:
+
+; -----------------------------------------------------------------------------
+; GAME_COMMAND_INDEX ($047D) - Index the 16-bit native handler-address table
+; -----------------------------------------------------------------------------
+GAME_COMMAND_INDEX:
         inc hl                       ; $047D : 23
         ex de,hl                     ; $047E : EB | ($2000+1) --> de
         ld hl,$09E8                  ; $047F : 21 E8 09 | Jump table
@@ -785,7 +882,11 @@ L047D:
         ld h,(hl)                    ; $0489 : 66
         ld l,a                       ; $048A : 6F
         jp (hl)                      ; $048B : E9
-L048C:
+
+; -----------------------------------------------------------------------------
+; GAME_TIME_SERVICE ($048C) - Game-time service and threshold test
+; -----------------------------------------------------------------------------
+GAME_TIME_SERVICE:
         ld a,($2003)                 ; $048C : 3A 03 20
         cp $1D                       ; $048F : FE 1D
         ret m                        ; $0491 : F8
@@ -895,7 +996,11 @@ L0543:
         ld a,$01                     ; $0556 : 3E 01
         ld ($2002),a                 ; $0558 : 32 02 20
         ret                          ; $055B : C9
-L055C:
+
+; -----------------------------------------------------------------------------
+; SELECT_INITIAL_GAME_SCRIPT ($055C) - Point the game-program cursor at the initial script
+; -----------------------------------------------------------------------------
+SELECT_INITIAL_GAME_SCRIPT:
         ld hl,$0929                  ; $055C : 21 29 09
         ld ($2000),hl                ; $055F : 22 00 20
         ld a,($202B)                 ; $0562 : 3A 2B 20 | Player score
@@ -904,11 +1009,19 @@ L055C:
         ret c                        ; $0569 : D8
         ld (hl),a                    ; $056A : 77 | Write new score
         ret                          ; $056B : C9
-L056C:
+
+; -----------------------------------------------------------------------------
+; SELECT_FOLLOWUP_GAME_SCRIPT ($056C) - Select follow-up interpreted command stream
+; -----------------------------------------------------------------------------
+SELECT_FOLLOWUP_GAME_SCRIPT:
         ld hl,$0963                  ; $056C : 21 63 09
         ld ($2000),hl                ; $056F : 22 00 20
         ret                          ; $0572 : C9
-L0573:
+
+; -----------------------------------------------------------------------------
+; ADVANCE_GAME_SCRIPT_CURSOR ($0573) - Advance game-program cursor by one byte
+; -----------------------------------------------------------------------------
+ADVANCE_GAME_SCRIPT_CURSOR:
         ld hl,($2000)                ; $0573 : 2A 00 20
         inc hl                       ; $0576 : 23
         ld ($2000),hl                ; $0577 : 22 00 20
@@ -995,7 +1108,11 @@ L05E9:
 L05FF:
         pop af                       ; $05FF : F1
         ret                          ; $0600 : C9
-L0601:
+
+; -----------------------------------------------------------------------------
+; RESET_SOUND_OUTPUTS ($0601) - Clear discrete sound output ports
+; -----------------------------------------------------------------------------
+RESET_SOUND_OUTPUTS:
         push af                      ; $0601 : F5
         xor a                        ; $0602 : AF
         out ($05),a                  ; $0603 : D3 05 | Audio outputs
@@ -1004,7 +1121,11 @@ L0601:
         out ($02),a                  ; $060A : D3 02 | Periscope lamp
         pop af                       ; $060C : F1
         ret                          ; $060D : C9
-L060E:
+
+; -----------------------------------------------------------------------------
+; PROCESS_ACTIVE_GRAPHICS ($060E) - Scan active graphic records
+; -----------------------------------------------------------------------------
+PROCESS_ACTIVE_GRAPHICS:
         push af                      ; $060E : F5
         ld hl,$21F0                  ; $060F : 21 F0 21
 L0612:
@@ -1029,7 +1150,11 @@ L062A:
 L0632:
         pop af                       ; $0632 : F1
         ret                          ; $0633 : C9
-L0634:
+
+; -----------------------------------------------------------------------------
+; UPDATE_GAME_SOUND ($0634) - Update discrete sound settings
+; -----------------------------------------------------------------------------
+UPDATE_GAME_SOUND:
         push af                      ; $0634 : F5
         ld a,($2003)                 ; $0635 : 3A 03 20
         and $0F                      ; $0638 : E6 0F
@@ -1059,7 +1184,11 @@ L064A:
         ld a,$0F                     ; $0665 : 3E 0F
         ld ($2025),a                 ; $0667 : 32 25 20 | Set timer
         ld a,b                       ; $066A : 78
-L066B:
+
+; -----------------------------------------------------------------------------
+; SELECT_OBJECT_RECORD ($066B) - Select one object record using a fixed stride
+; -----------------------------------------------------------------------------
+SELECT_OBJECT_RECORD:
         ld hl,$202C                  ; $066B : 21 2C 20
         ld de,$000D                  ; $066E : 11 0D 00
 L0671:
@@ -1088,7 +1217,11 @@ L068B:
         add a,l                      ; $0692 : 85
         ld l,a                       ; $0693 : 6F
         ld c,$08                     ; $0694 : 0E 08
-L0696:
+
+; -----------------------------------------------------------------------------
+; COPY_OBJECT_RECORD ($0696) - Copy bytes into an object record
+; -----------------------------------------------------------------------------
+COPY_OBJECT_RECORD:
         ld a,(hl)                    ; $0696 : 7E
         inc hl                       ; $0697 : 23
         ld (de),a                    ; $0698 : 12
@@ -1100,7 +1233,11 @@ L0696:
         ld (de),a                    ; $06A1 : 12 | Store ship type?
         pop af                       ; $06A2 : F1
         ret                          ; $06A3 : C9
-L06A4:
+
+; -----------------------------------------------------------------------------
+; CLEAR_OBJECT_RECORD ($06A4) - Clear a selected object record
+; -----------------------------------------------------------------------------
+CLEAR_OBJECT_RECORD:
         ld hl,$21C1                  ; $06A4 : 21 C1 21
 L06A7:
         ld a,(hl)                    ; $06A7 : 7E
@@ -1304,7 +1441,11 @@ L0796:
         call $0B30                   ; $07D4 : CD 30 0B | Draw string hl @ de, length a
         pop hl                       ; $07D7 : E1
         jp $074F                     ; $07D8 : C3 4F 07
-L07DB:
+
+; -----------------------------------------------------------------------------
+; SEARCH_ACTIVE_OBJECTS ($07DB) - Find a matching active object
+; -----------------------------------------------------------------------------
+SEARCH_ACTIVE_OBJECTS:
         ld hl,$21F0                  ; $07DB : 21 F0 21
 L07DE:
         ld a,(hl)                    ; $07DE : 7E
@@ -1317,7 +1458,11 @@ L07DE:
         dec hl                       ; $07E7 : 2B
         ld (hl),d                    ; $07E8 : 72
         ret                          ; $07E9 : C9
-L07EA:
+
+; -----------------------------------------------------------------------------
+; UPDATE_SCORE_DIFFICULTY ($07EA) - Derive gameplay difficulty from score state
+; -----------------------------------------------------------------------------
+UPDATE_SCORE_DIFFICULTY:
         ld a,($202B)                 ; $07EA : 3A 2B 20 | Player score
         cp $40                       ; $07ED : FE 40
         jp c,$07F4                   ; $07EF : DA F4 07
@@ -1409,7 +1554,11 @@ L085E:
 L087C:
         ld ($2029),a                 ; $087C : 32 29 20 | Write
         ret                          ; $087F : C9
-L0880:
+
+; -----------------------------------------------------------------------------
+; RESET_GAME_STATE ($0880) - Reset game state and script pointer
+; -----------------------------------------------------------------------------
+RESET_GAME_STATE:
         di                           ; $0880 : F3
         ex de,hl                     ; $0881 : EB | Stash hl in de
         ld ($2000),hl                ; $0882 : 22 00 20
@@ -1429,7 +1578,11 @@ L0898:
         jp nz,$0898                  ; $089B : C2 98 08 | Loop
         ld sp,$2400                  ; $089E : 31 00 24
         jp (hl)                      ; $08A1 : E9
-L08A2:
+
+; -----------------------------------------------------------------------------
+; INITIALIZE_GAME_STATE ($08A2) - Initialize RAM and launch the main control path
+; -----------------------------------------------------------------------------
+INITIALIZE_GAME_STATE:
         pop hl                       ; $08A2 : E1
         ld ($2009),hl                ; $08A3 : 22 09 20
         call $0880                   ; $08A6 : CD 80 08
@@ -1439,7 +1592,11 @@ L08A2:
         ld de,$27E0                  ; $08B0 : 11 E0 27
         ld a,$20                     ; $08B3 : 3E 20
         jp $0B30                     ; $08B5 : C3 30 0B | Draw string hl @ de, length a
-L08B8:
+
+; -----------------------------------------------------------------------------
+; POLL_PLAYER_INPUT ($08B8) - Poll player input port
+; -----------------------------------------------------------------------------
+POLL_PLAYER_INPUT:
         in a,($01)                   ; $08B8 : DB 01 | IN0
         ld b,a                       ; $08BA : 47
         in a,($01)                   ; $08BB : DB 01 | IN0
@@ -1499,7 +1656,11 @@ L0906:
         ld ($2002),a                 ; $0913 : 32 02 20 | Store time
         ld ($202A),a                 ; $0916 : 32 2A 20 | Store time ?
         ret                          ; $0919 : C9
-L091A:
+
+; -----------------------------------------------------------------------------
+; CHECK_COIN_INPUT ($091A) - Examine coin-input bits
+; -----------------------------------------------------------------------------
+CHECK_COIN_INPUT:
         ld a,($2007)                 ; $091A : 3A 07 20
         and $0C                      ; $091D : E6 0C
         cp $0C                       ; $091F : FE 0C
@@ -1509,28 +1670,39 @@ L091A:
         and a                        ; $0924 : A7
         ret z                        ; $0925 : C8
         jp $0906                     ; $0926 : C3 06 09
-        DB $04,$01,$B8,$0E,$30,$3E,$09,$05,$20,$33,$38,$E6 ; $0929 raw original bytes
-        DB $0E,$F1,$0E,$04,$1A,$CC,$0E,$02,$3C,$0A,$06,$20 ; $0935 raw original bytes
-        DB $E9,$21,$25,$3E,$0A,$2B,$20,$E9,$21,$35,$3E,$02 ; $0941 raw original bytes
-        DB $0F,$04,$09,$C3,$0E,$0B,$2C,$01,$1E,$00,$04,$09 ; $094D raw original bytes
-        DB $B8,$0E,$0B,$2C,$01,$1E,$00,$06,$4E,$09,$03,$04 ; $0959 raw original bytes
-        DB $08,$FC,$0E,$0C,$2C,$04,$0A,$CC,$0E,$02,$3C,$0A ; $0965 raw original bytes
-        DB $06,$20,$E9,$21,$25,$3E,$09,$05,$20,$33,$38,$E6 ; $0971 raw original bytes
-        DB $0E,$F1,$0E,$01,$5A,$00,$08,$09,$60,$20,$EB,$0D ; $097D raw original bytes
-        DB $20,$15,$00,$E0,$00,$01,$C4,$01,$5A,$00,$08,$09 ; $0989 raw original bytes
-        DB $EF,$20,$75,$0E,$9C,$E0,$FA,$00,$A8,$00,$C0,$01 ; $0995 raw original bytes
-        DB $B4,$00,$06,$63,$09,$01,$0F,$00,$03,$04,$09,$29 ; $09A1 raw original bytes
-        DB $0F,$0E,$3C,$07,$28,$22,$20,$07,$0A,$21,$20,$0B ; $09AD raw original bytes
-        DB $00,$48,$44,$42,$41,$88,$84,$82,$81,$18,$14,$12 ; $09B9 raw original bytes
-        DB $11,$28,$24,$22,$21,$C8,$08,$F8,$08,$C7,$08,$C7 ; $09C5 raw original bytes
-        DB $08,$4D,$08,$C7,$08,$C7,$08,$C7,$08,$C7,$08,$C7 ; $09D1 raw original bytes
-        DB $08,$C7,$08,$C7,$08,$C7,$08,$7B,$05,$C7,$08 ; $09DD raw original bytes
 
+; -----------------------------------------------------------------------------
+; GAME_SCRIPT_STREAMS ($0929) - Interpreted game command bytes and inline operands; not native opcodes
+; -----------------------------------------------------------------------------
+GAME_SCRIPT_STREAMS:
+        DB $04,$01,$B8,$0E,$30,$3E,$09,$05,$20,$33,$38,$E6 ; $0929 raw original bytes | interpreted command stream and inline operands
+        DB $0E,$F1,$0E,$04,$1A,$CC,$0E,$02,$3C,$0A,$06,$20 ; $0935 raw original bytes | interpreted command stream and inline operands
+        DB $E9,$21,$25,$3E,$0A,$2B,$20,$E9,$21,$35,$3E,$02 ; $0941 raw original bytes | interpreted command stream and inline operands
+        DB $0F,$04,$09,$C3,$0E,$0B,$2C,$01,$1E,$00,$04,$09 ; $094D raw original bytes | interpreted command stream and inline operands
+        DB $B8,$0E,$0B,$2C,$01,$1E,$00,$06,$4E,$09,$03,$04 ; $0959 raw original bytes | interpreted command stream and inline operands
+        DB $08,$FC,$0E,$0C,$2C,$04,$0A,$CC,$0E,$02,$3C,$0A ; $0965 raw original bytes | interpreted command stream and inline operands
+        DB $06,$20,$E9,$21,$25,$3E,$09,$05,$20,$33,$38,$E6 ; $0971 raw original bytes | interpreted command stream and inline operands
+        DB $0E,$F1,$0E,$01,$5A,$00,$08,$09,$60,$20,$EB,$0D ; $097D raw original bytes | interpreted command stream and inline operands
+        DB $20,$15,$00,$E0,$00,$01,$C4,$01,$5A,$00,$08,$09 ; $0989 raw original bytes | interpreted command stream and inline operands
+        DB $EF,$20,$75,$0E,$9C,$E0,$FA,$00,$A8,$00,$C0,$01 ; $0995 raw original bytes | interpreted command stream and inline operands
+        DB $B4,$00,$06,$63,$09,$01,$0F,$00,$03,$04,$09,$29 ; $09A1 raw original bytes | interpreted command stream and inline operands
+        DB $0F,$0E,$3C,$07,$28,$22,$20,$07,$0A,$21,$20,$0B ; $09AD raw original bytes | interpreted command stream and inline operands
+        DB $00,$48,$44,$42,$41,$88,$84,$82,$81,$18,$14,$12 ; $09B9 raw original bytes | lookup and command dispatch tables
+        DB $11,$28,$24,$22,$21,$C8,$08,$F8,$08,$C7,$08,$C7 ; $09C5 raw original bytes | lookup and command dispatch tables
+        DB $08,$4D,$08,$C7,$08,$C7,$08,$C7,$08,$C7,$08,$C7 ; $09D1 raw original bytes | lookup and command dispatch tables
+        DB $08,$C7,$08,$C7,$08,$C7,$08,$7B,$05,$C7,$08 ; $09DD raw original bytes | lookup and command dispatch tables
 ; Game script/native handler pointer region begins here.
-L09E8:
-        DB $C7,$08,$7C,$0B,$72,$0B,$A2,$08,$22,$0B,$ED,$0A ; $09E8 raw original bytes
-        DB $86,$0B,$E1,$0A,$9F,$0A,$BC,$0A,$53,$0A,$6D,$08 ; $09F4 raw original bytes
-L0A00:
+
+; -----------------------------------------------------------------------------
+; GAME_COMMAND_HANDLER_TABLE ($09E8) - Indexed 16-bit native handler addresses, little endian
+; -----------------------------------------------------------------------------
+GAME_COMMAND_HANDLER_TABLE:
+        DB $C7,$08,$7C,$0B,$72,$0B,$A2,$08,$22,$0B,$ED,$0A ; $09E8 raw original bytes | 16-bit native command handler vectors
+        DB $86,$0B,$E1,$0A,$9F,$0A,$BC,$0A,$53,$0A,$6D,$08 ; $09F4 raw original bytes | 16-bit native command handler vectors
+; -----------------------------------------------------------------------------
+; BIT_SHIFT_SETUP ($0A00) - Set up bit-shift operands
+; -----------------------------------------------------------------------------
+BIT_SHIFT_SETUP:
         ld a,e                       ; $0A00 : 7B | Mask e
         and $07                      ; $0A01 : E6 07
         ld c,a                       ; $0A03 : 4F | Stash in a
@@ -1549,7 +1721,11 @@ L0A06:
         add a,$24                    ; $0A12 : C6 24
         ld d,a                       ; $0A14 : 57
         ret                          ; $0A15 : C9
-L0A16:
+
+; -----------------------------------------------------------------------------
+; COPY_OBJECT_BYTES ($0A16) - Copy object data to destination
+; -----------------------------------------------------------------------------
+COPY_OBJECT_BYTES:
         push af                      ; $0A16 : F5 | Store count
         ld a,(hl)                    ; $0A17 : 7E | Get value
         ld (bc),a                    ; $0A18 : 02 | Store value
@@ -1566,7 +1742,11 @@ L0A16:
         dec a                        ; $0A25 : 3D
         jp nz,$0A16                  ; $0A26 : C2 16 0A | loop
         ret                          ; $0A29 : C9
-L0A2A:
+
+; -----------------------------------------------------------------------------
+; COPY_GRAPHIC_BLOCK ($0A2A) - Copy rectangular graphics bytes
+; -----------------------------------------------------------------------------
+COPY_GRAPHIC_BLOCK:
         push bc                      ; $0A2A : C5
         push hl                      ; $0A2B : E5
 L0A2C:
@@ -1583,7 +1763,11 @@ L0A2C:
         dec b                        ; $0A3A : 05
         jp nz,$0A2A                  ; $0A3B : C2 2A 0A
         ret                          ; $0A3E : C9
-L0A3F:
+
+; -----------------------------------------------------------------------------
+; CLEAR_GRAPHIC_BLOCK ($0A3F) - Clear rectangular graphics bytes
+; -----------------------------------------------------------------------------
+CLEAR_GRAPHIC_BLOCK:
         xor a                        ; $0A3F : AF
 L0A40:
         push bc                      ; $0A40 : C5
@@ -1625,7 +1809,11 @@ L0A42:
         pop hl                       ; $0A74 : E1
         ld a,$04                     ; $0A75 : 3E 04
         jp $0B30                     ; $0A77 : C3 30 0B | Draw string hl @ de, length a
-L0A7A:
+
+; -----------------------------------------------------------------------------
+; TEST_OBJECT_FLAGS ($0A7A) - Test object flag bits
+; -----------------------------------------------------------------------------
+TEST_OBJECT_FLAGS:
         dec hl                       ; $0A7A : 2B
         ld a,(hl)                    ; $0A7B : 7E
         and $40                      ; $0A7C : E6 40
@@ -1641,7 +1829,11 @@ L0A82:
         and $0F                      ; $0A87 : E6 0F | Mask high nybble
         jp nz,$0A8E                  ; $0A89 : C2 8E 0A
         ld a,$10                     ; $0A8C : 3E 10 | $40 -> blank
-L0A8E:
+
+; -----------------------------------------------------------------------------
+; CONVERT_SCORE_TO_DIGITS ($0A8E) - Convert score digits to display codes
+; -----------------------------------------------------------------------------
+CONVERT_SCORE_TO_DIGITS:
         add a,$30                    ; $0A8E : C6 30 | Decimal to ascii
         ld (de),a                    ; $0A90 : 12 | Store digit
         inc de                       ; $0A91 : 13 | Next screen loc
@@ -1730,7 +1922,11 @@ L0ADC:
         dec hl                       ; $0B02 : 2B
         dec hl                       ; $0B03 : 2B
         jp (hl)                      ; $0B04 : E9
-L0B05:
+
+; -----------------------------------------------------------------------------
+; HANDLE_INPUT_CHANGE ($0B05) - Handle a change on an input bit
+; -----------------------------------------------------------------------------
+HANDLE_INPUT_CHANGE:
         xor (hl)                     ; $0B05 : AE
         ret z                        ; $0B06 : C8 | No changes
         ld c,a                       ; $0B07 : 4F | Stash IN0
@@ -1765,7 +1961,11 @@ L0B18:
         call $0ADC                   ; $0B29 : CD DC 0A | (hl, hl,1) -> de, hl+=2
         ld ($2000),hl                ; $0B2C : 22 00 20 | Next command
         pop hl                       ; $0B2F : E1 | String src address
-L0B30:
+
+; -----------------------------------------------------------------------------
+; RENDER_GAME_TEXT ($0B30) - Render an encoded text stream
+; -----------------------------------------------------------------------------
+RENDER_GAME_TEXT:
         push af                      ; $0B30 : F5
 L0B31:
         ld a,(hl)                    ; $0B31 : 7E | Get byte
@@ -1784,7 +1984,11 @@ L0B42:
         inc b                        ; $0B42 : 04
         jp nz,$0B39                  ; $0B43 : C2 39 0B | Loop
         jp $0B31                     ; $0B46 : C3 31 0B | Next char
-L0B49:
+
+; -----------------------------------------------------------------------------
+; SELECT_CHARACTER_GLYPH ($0B49) - Locate the character glyph bitmap
+; -----------------------------------------------------------------------------
+SELECT_CHARACTER_GLYPH:
         push hl                      ; $0B49 : E5
         push de                      ; $0B4A : D5
         ld hl,$0B8F                  ; $0B4B : 21 8F 0B | Start of char table
@@ -1794,7 +1998,11 @@ L0B54:
         add hl,bc                    ; $0B54 : 09
         dec a                        ; $0B55 : 3D
         jp nz,$0B54                  ; $0B56 : C2 54 0B
-L0B59:
+
+; -----------------------------------------------------------------------------
+; COPY_CHARACTER_GLYPH ($0B59) - Copy the character glyph to video RAM
+; -----------------------------------------------------------------------------
+COPY_CHARACTER_GLYPH:
         ex de,hl                     ; $0B59 : EB
         ld bc,$0020                  ; $0B5A : 01 20 00
         ld a,$0A                     ; $0B5D : 3E 0A | Loop $a times
@@ -1833,102 +2041,132 @@ L0B5F:
         ex de,hl                     ; $0B8A : EB
         ld ($2000),hl                ; $0B8B : 22 00 20
         ret                          ; $0B8E : C9
-        DB $3C,$7E,$66,$66,$66,$66,$66,$66,$7E,$3C,$18,$1C ; $0B8F raw original bytes
-        DB $18,$18,$18,$18,$18,$18,$3C,$3C,$3C,$7E,$66,$60 ; $0B9B raw original bytes
-        DB $7C,$3E,$06,$06,$7E,$7E,$3C,$7E,$66,$60,$38,$78 ; $0BA7 raw original bytes
-        DB $60,$66,$7E,$3C,$66,$66,$66,$66,$7E,$7E,$60,$60 ; $0BB3 raw original bytes
-        DB $60,$60,$3E,$3E,$06,$06,$3E,$7E,$60,$66,$7E,$3C ; $0BBF raw original bytes
-        DB $3C,$3E,$06,$06,$3E,$7E,$66,$66,$7E,$3C,$7E,$7E ; $0BCB raw original bytes
-        DB $60,$70,$30,$38,$18,$1C,$0C,$0C,$3C,$7E,$66,$66 ; $0BD7 raw original bytes
-        DB $3C,$7E,$66,$66,$7E,$3C,$3C,$7E,$66,$66,$7E,$7C ; $0BE3 raw original bytes
-        DB $60,$60,$7C,$3C,$0C,$93,$60,$00,$00,$00,$00,$00 ; $0BEF raw original bytes
-        DB $00,$00,$60,$99,$06 ; $0BFB raw original bytes
 
+; -----------------------------------------------------------------------------
+; NUMERIC_GLYPH_BITMAPS ($0B8F) - 10-row numeric character patterns; bytes map to pixel rows
+; -----------------------------------------------------------------------------
+NUMERIC_GLYPH_BITMAPS:
+; First glyph ($0B8F-$0B98), one byte per raster row, '#' = set pixel:
+;   ..####..
+;   .######.
+;   .##..##.
+;   .##..##.
+;   .##..##.
+;   .##..##.
+;   .##..##.
+;   .##..##.
+;   .######.
+;   ..####..
+        DB $3C,$7E,$66,$66,$66,$66,$66,$66,$7E,$3C,$18,$1C ; $0B8F raw original bytes | numeric character glyph bitmap rows
+        DB $18,$18,$18,$18,$18,$18,$3C,$3C,$3C,$7E,$66,$60 ; $0B9B raw original bytes | numeric character glyph bitmap rows
+        DB $7C,$3E,$06,$06,$7E,$7E,$3C,$7E,$66,$60,$38,$78 ; $0BA7 raw original bytes | numeric character glyph bitmap rows
+        DB $60,$66,$7E,$3C,$66,$66,$66,$66,$7E,$7E,$60,$60 ; $0BB3 raw original bytes | numeric character glyph bitmap rows
+        DB $60,$60,$3E,$3E,$06,$06,$3E,$7E,$60,$66,$7E,$3C ; $0BBF raw original bytes | numeric character glyph bitmap rows
+        DB $3C,$3E,$06,$06,$3E,$7E,$66,$66,$7E,$3C,$7E,$7E ; $0BCB raw original bytes | numeric character glyph bitmap rows
+        DB $60,$70,$30,$38,$18,$1C,$0C,$0C,$3C,$7E,$66,$66 ; $0BD7 raw original bytes | numeric character glyph bitmap rows
+        DB $3C,$7E,$66,$66,$7E,$3C,$3C,$7E,$66,$66,$7E,$7C ; $0BE3 raw original bytes | numeric character glyph bitmap rows
+        DB $60,$60,$7C,$3C,$0C,$93,$60,$00,$00,$00,$00,$00 ; $0BEF raw original bytes | numeric character glyph bitmap rows
+        DB $00,$00,$60,$99,$06 ; $0BFB raw original bytes | numeric character glyph bitmap rows
 ; ROM 4: sw0044.e ($0C00-$0FFF)
-        DB $00,$00,$00,$00,$00,$00,$00,$30,$CD,$02,$00,$00 ; $0C00 raw original bytes
-        DB $00,$00,$00,$00,$00,$02,$C0,$78,$E0,$80,$F0,$01 ; $0C0C raw original bytes
-        DB $C0,$F0,$7C,$08,$1C,$3E,$7F,$FF,$FF,$BF,$1F,$02 ; $0C18 raw original bytes
-        DB $40,$02,$80,$78,$1E,$07,$01,$7C,$F8,$0C,$10,$00 ; $0C24 raw original bytes
-        DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$18,$3C,$7E ; $0C30 raw original bytes
-        DB $66,$66,$66,$7E,$7E,$66,$66,$3E,$7E,$66,$66,$3E ; $0C3C raw original bytes
-        DB $7E,$66,$66,$7E,$3E,$3C,$7E,$66,$06,$06,$06,$06 ; $0C48 raw original bytes
-        DB $66,$7E,$3C,$3E,$7E,$66,$66,$66,$66,$66,$66,$7E ; $0C54 raw original bytes
-        DB $3E,$7E,$7E,$06,$06,$3E,$3E,$06,$06,$7E,$7E,$7E ; $0C60 raw original bytes
-        DB $7E,$06,$06,$3E,$3E,$06,$06,$06,$06,$3C,$7E,$66 ; $0C6C raw original bytes
-        DB $06,$06,$76,$76,$66,$7E,$3C,$66,$66,$66,$66,$7E ; $0C78 raw original bytes
-        DB $7E,$66,$66,$66,$66,$3C,$3C,$18,$18,$18,$18,$18 ; $0C84 raw original bytes
-        DB $18,$3C,$3C,$60,$60,$60,$60,$60,$60,$60,$66,$7E ; $0C90 raw original bytes
-        DB $3C,$66,$66,$76,$3E,$1E,$1E,$3E,$76,$66,$66,$06 ; $0C9C raw original bytes
-        DB $06,$06,$06,$06,$06,$06,$06,$7E,$7E,$C3,$C3,$E7 ; $0CA8 raw original bytes
-        DB $E7,$FF,$FF,$DB,$C3,$C3,$C3,$66,$66,$6E,$6E,$7E ; $0CB4 raw original bytes
-        DB $7E,$76,$76,$66,$66,$3C,$7E,$66,$66,$66,$66,$66 ; $0CC0 raw original bytes
-        DB $66,$7E,$3C,$3E,$7E,$66,$66,$7E,$3E,$06,$06,$06 ; $0CCC raw original bytes
-        DB $06,$3C,$7E,$66,$66,$66,$66,$66,$66,$7E,$5C,$3E ; $0CD8 raw original bytes
-        DB $7E,$66,$66,$7E,$3E,$76,$66,$66,$66,$3C,$7E,$66 ; $0CE4 raw original bytes
-        DB $06,$3E,$7C,$60,$66,$7E,$3C,$7E,$7E,$18,$18,$18 ; $0CF0 raw original bytes
-        DB $18,$18,$18,$18,$18,$66,$66,$66,$66,$66,$66,$66 ; $0CFC raw original bytes
-        DB $66,$7E,$3C,$66,$66,$66,$66,$66,$7E,$3C,$3C,$18 ; $0D08 raw original bytes
-        DB $18,$C3,$C3,$C3,$DB,$FF,$FF,$E7,$E7,$C3,$C3,$66 ; $0D14 raw original bytes
-        DB $66,$7E,$3C,$18,$18,$3C,$7E,$66,$66,$66,$66,$7E ; $0D20 raw original bytes
-        DB $3C,$18,$18,$18,$18,$18,$18,$7E,$7E,$60,$70,$38 ; $0D2C raw original bytes
-        DB $1C,$0E,$06,$7E,$7E,$05,$0C,$00,$00,$08,$00,$00 ; $0D38 raw original bytes
-        DB $00,$00,$08,$00,$00,$00,$60,$0E,$00,$00,$00,$E0 ; $0D44 raw original bytes
-        DB $CE,$3F,$00,$00,$E0,$DE,$03,$00,$F8,$F7,$DF,$F7 ; $0D50 raw original bytes
-        DB $0F,$80,$F7,$DF,$F7,$00,$FF,$FF,$FF,$FF,$FF,$FF ; $0D5C raw original bytes
-        DB $FF,$FF,$FF,$7F,$FF,$FF,$FF,$FF,$3F,$FE,$FF,$FF ; $0D68 raw original bytes
-        DB $FF,$1F,$FE,$FF,$FF,$FF,$0F,$04,$0C,$00,$00,$03 ; $0D74 raw original bytes
-        DB $00,$00,$36,$03,$00,$00,$36,$03,$00,$02,$B6,$03 ; $0D80 raw original bytes
-        DB $00,$87,$FF,$F3,$07,$E2,$FF,$F7,$00,$FF,$FF,$FF ; $0D8C raw original bytes
-        DB $FF,$FF,$FF,$FF,$7F,$FF,$FF,$FF,$3F,$FC,$FF,$FF ; $0D98 raw original bytes
-        DB $1F,$FC,$FF,$FF,$0F,$F8,$FF,$FF,$07,$05,$0C,$00 ; $0DA4 raw original bytes
-        DB $00,$40,$00,$00,$00,$00,$F0,$00,$00,$00,$00,$F0 ; $0DB0 raw original bytes
-        DB $00,$00,$00,$80,$F0,$1E,$00,$00,$00,$FB,$06,$00 ; $0DBC raw original bytes
-        DB $FF,$FF,$FF,$FF,$FF,$FC,$FF,$FF,$FF,$3F,$FC,$FF ; $0DC8 raw original bytes
-        DB $FF,$FF,$1F,$FC,$FF,$FF,$FF,$0F,$F8,$FF,$FF,$FF ; $0DD4 raw original bytes
-        DB $07,$F8,$FF,$FF,$FF,$03,$F8,$FF,$FF,$FF,$03,$04 ; $0DE0 raw original bytes
-        DB $0B,$40,$00,$00,$02,$40,$80,$00,$02,$40,$00,$07 ; $0DEC raw original bytes
-        DB $02,$40,$00,$07,$02,$40,$F0,$07,$02,$FC,$F0,$07 ; $0DF8 raw original bytes
-        DB $F8,$FC,$FF,$FF,$7F,$FC,$FF,$FF,$3F,$F8,$FF,$FF ; $0E04 raw original bytes
-        DB $1F,$F0,$FF,$FF,$0F,$F0,$FF,$FF,$0F,$04,$0B,$80 ; $0E10 raw original bytes
-        DB $00,$00,$00,$00,$00,$00,$01,$A0,$01,$00,$01,$A0 ; $0E1C raw original bytes
-        DB $01,$00,$01,$F0,$01,$00,$01,$F8,$01,$00,$F9,$F8 ; $0E28 raw original bytes
-        DB $FF,$FF,$7F,$F0,$FF,$FF,$3F,$F0,$FF,$FF,$1F,$F0 ; $0E34 raw original bytes
-        DB $FF,$FF,$0F,$E0,$FF,$FF,$0F,$02,$06,$00,$03,$10 ; $0E40 raw original bytes
-        DB $07,$E0,$FF,$FF,$7F,$FF,$3F,$FF,$1F,$02,$0F,$10 ; $0E4C raw original bytes
-        DB $00,$30,$02,$70,$01,$FC,$00,$F8,$11,$F0,$3B,$E0 ; $0E58 raw original bytes
-        DB $7F,$C0,$3F,$80,$1F,$00,$3F,$00,$1E,$00,$04,$00 ; $0E64 raw original bytes
-        DB $48,$00,$F8,$00,$F8,$01,$11,$10,$38,$38,$38,$38 ; $0E70 raw original bytes
-        DB $38,$38,$38,$38,$38,$38,$38,$38,$10,$10,$10,$38 ; $0E7C raw original bytes
-        DB $01,$0E,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18 ; $0E88 raw original bytes
-        DB $18,$18,$00,$18,$01,$09,$10,$10,$10,$10,$10,$10 ; $0E94 raw original bytes
-        DB $10,$10,$10,$01,$10,$10,$BA,$7C,$FE,$7C,$38,$54 ; $0EA0 raw original bytes
-        DB $10,$00,$10,$00,$08,$00,$00,$04,$00,$3D,$3E,$3F ; $0EAC raw original bytes
-        DB $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$47 ; $0EB8 raw original bytes
-        DB $41,$4D,$45,$40,$4F,$56,$45,$52,$48,$49,$47,$48 ; $0EC4 raw original bytes
-        DB $40,$53,$43,$4F,$52,$45,$40,$40,$40,$40,$40,$40 ; $0ED0 raw original bytes
-        DB $59,$4F,$55,$52,$40,$53,$43,$4F,$52,$45,$49,$4E ; $0EDC raw original bytes
-        DB $53,$45,$52,$54,$40,$43,$4F,$49,$4E,$50,$55,$53 ; $0EE8 raw original bytes
-        DB $48,$40,$42,$55,$54,$54,$4F,$4E,$53,$45,$41,$40 ; $0EF4 raw original bytes
-        DB $57,$4F,$4C,$46,$3A,$3B,$3C,$3B,$3C,$3A,$3B,$3C ; $0F00 raw original bytes
-        DB $3A,$3C,$3B,$3C,$3A,$3B,$3A,$3C,$3B,$3A,$3C,$3A ; $0F0C raw original bytes
-        DB $3B,$3C,$3A,$3C,$3B,$3C,$3A,$3B,$3C,$3A,$3B,$3C ; $0F18 raw original bytes
-        DB $42,$4F,$4E,$55,$53,$54,$49,$4D,$45,$2D,$53,$43 ; $0F24 raw original bytes
-        DB $4F,$52,$45,$45,$58,$54,$45,$4E,$44,$45,$44,$16 ; $0F30 raw original bytes
-        DB $54,$49,$4D,$45,$44,$0F,$4C,$0F,$01,$41,$04,$3D ; $0F3C raw original bytes
-        DB $5A,$2F,$50,$3F,$01,$41,$04,$3D,$57,$2F,$4D,$3F ; $0F48 raw original bytes
-        DB $61,$71,$81,$91,$03,$03,$03,$01,$01,$07,$00,$08 ; $0F54 raw original bytes
-        DB $18,$10,$38,$30,$20,$28,$78,$70,$60,$68,$40,$48 ; $0F60 raw original bytes
-        DB $58,$50,$F8,$F0,$E0,$E8,$C0,$C8,$D8,$D0,$80,$88 ; $0F6C raw original bytes
-        DB $98,$90,$B8,$B0,$A0,$A8,$0D,$3D,$20,$14,$00,$D8 ; $0F78 raw original bytes
-        DB $00,$02,$0D,$7B,$20,$14,$00,$E0,$00,$02,$0D,$AD ; $0F84 raw original bytes
-        DB $20,$14,$00,$D8,$00,$02,$0D,$EB,$20,$15,$00,$E0 ; $0F90 raw original bytes
-        DB $00,$01,$0E,$19,$20,$15,$00,$E0,$00,$01,$0E,$47 ; $0F9C raw original bytes
-        DB $20,$1A,$00,$F0,$00,$03,$0D,$3D,$40,$34,$00,$D8 ; $0FA8 raw original bytes
-        DB $D8,$FE,$0D,$7B,$40,$34,$00,$E0,$E0,$FE,$0D,$AD ; $0FB4 raw original bytes
-        DB $40,$34,$00,$D8,$D8,$FE,$0D,$EB,$40,$35,$00,$E0 ; $0FC0 raw original bytes
-        DB $E0,$FF,$0E,$19,$40,$35,$00,$E0,$E0,$FF,$0E,$47 ; $0FCC raw original bytes
-        DB $40,$3A,$00,$F0,$F0,$FD,$06,$04,$02,$06,$03,$05 ; $0FD8 raw original bytes
-        DB $01 ; $0FE4 raw original bytes
+
+; -----------------------------------------------------------------------------
+; GRAPHICS_ASSET_ROM ($0C00) - Graphics and encoded screen assets rather than executable routines
+; -----------------------------------------------------------------------------
+GRAPHICS_ASSET_ROM:
+        DB $00,$00,$00,$00,$00,$00,$00,$30,$CD,$02,$00,$00 ; $0C00 raw original bytes | graphics header and sprite-pattern bytes
+        DB $00,$00,$00,$00,$00,$02,$C0,$78,$E0,$80,$F0,$01 ; $0C0C raw original bytes | graphics header and sprite-pattern bytes
+        DB $C0,$F0,$7C,$08,$1C,$3E,$7F,$FF,$FF,$BF,$1F,$02 ; $0C18 raw original bytes | graphics header and sprite-pattern bytes
+        DB $40,$02,$80,$78,$1E,$07,$01,$7C,$F8,$0C,$10,$00 ; $0C24 raw original bytes | graphics header and sprite-pattern bytes
+        DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$18,$3C,$7E ; $0C30 raw original bytes | text character bitmap rows
+        DB $66,$66,$66,$7E,$7E,$66,$66,$3E,$7E,$66,$66,$3E ; $0C3C raw original bytes | text character bitmap rows
+        DB $7E,$66,$66,$7E,$3E,$3C,$7E,$66,$06,$06,$06,$06 ; $0C48 raw original bytes | text character bitmap rows
+        DB $66,$7E,$3C,$3E,$7E,$66,$66,$66,$66,$66,$66,$7E ; $0C54 raw original bytes | text character bitmap rows
+        DB $3E,$7E,$7E,$06,$06,$3E,$3E,$06,$06,$7E,$7E,$7E ; $0C60 raw original bytes | text character bitmap rows
+        DB $7E,$06,$06,$3E,$3E,$06,$06,$06,$06,$3C,$7E,$66 ; $0C6C raw original bytes | text character bitmap rows
+        DB $06,$06,$76,$76,$66,$7E,$3C,$66,$66,$66,$66,$7E ; $0C78 raw original bytes | text character bitmap rows
+        DB $7E,$66,$66,$66,$66,$3C,$3C,$18,$18,$18,$18,$18 ; $0C84 raw original bytes | text character bitmap rows
+        DB $18,$3C,$3C,$60,$60,$60,$60,$60,$60,$60,$66,$7E ; $0C90 raw original bytes | text character bitmap rows
+        DB $3C,$66,$66,$76,$3E,$1E,$1E,$3E,$76,$66,$66,$06 ; $0C9C raw original bytes | text character bitmap rows
+        DB $06,$06,$06,$06,$06,$06,$06,$7E,$7E,$C3,$C3,$E7 ; $0CA8 raw original bytes | text character bitmap rows
+        DB $E7,$FF,$FF,$DB,$C3,$C3,$C3,$66,$66,$6E,$6E,$7E ; $0CB4 raw original bytes | text character bitmap rows
+        DB $7E,$76,$76,$66,$66,$3C,$7E,$66,$66,$66,$66,$66 ; $0CC0 raw original bytes | text character bitmap rows
+        DB $66,$7E,$3C,$3E,$7E,$66,$66,$7E,$3E,$06,$06,$06 ; $0CCC raw original bytes | text character bitmap rows
+        DB $06,$3C,$7E,$66,$66,$66,$66,$66,$66,$7E,$5C,$3E ; $0CD8 raw original bytes | text character bitmap rows
+        DB $7E,$66,$66,$7E,$3E,$76,$66,$66,$66,$3C,$7E,$66 ; $0CE4 raw original bytes | text character bitmap rows
+        DB $06,$3E,$7C,$60,$66,$7E,$3C,$7E,$7E,$18,$18,$18 ; $0CF0 raw original bytes | text character bitmap rows
+        DB $18,$18,$18,$18,$18,$66,$66,$66,$66,$66,$66,$66 ; $0CFC raw original bytes | text character bitmap rows
+        DB $66,$7E,$3C,$66,$66,$66,$66,$66,$7E,$3C,$3C,$18 ; $0D08 raw original bytes | text character bitmap rows
+        DB $18,$C3,$C3,$C3,$DB,$FF,$FF,$E7,$E7,$C3,$C3,$66 ; $0D14 raw original bytes | text character bitmap rows
+        DB $66,$7E,$3C,$18,$18,$3C,$7E,$66,$66,$66,$66,$7E ; $0D20 raw original bytes | text character bitmap rows
+        DB $3C,$18,$18,$18,$18,$18,$18,$7E,$7E,$60,$70,$38 ; $0D2C raw original bytes | text character bitmap rows
+        DB $1C,$0E,$06,$7E,$7E,$05,$0C,$00,$00,$08,$00,$00 ; $0D38 raw original bytes | text character bitmap rows
+        DB $00,$00,$08,$00,$00,$00,$60,$0E,$00,$00,$00,$E0 ; $0D44 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $CE,$3F,$00,$00,$E0,$DE,$03,$00,$F8,$F7,$DF,$F7 ; $0D50 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $0F,$80,$F7,$DF,$F7,$00,$FF,$FF,$FF,$FF,$FF,$FF ; $0D5C raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$FF,$7F,$FF,$FF,$FF,$FF,$3F,$FE,$FF,$FF ; $0D68 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$1F,$FE,$FF,$FF,$FF,$0F,$04,$0C,$00,$00,$03 ; $0D74 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$00,$36,$03,$00,$00,$36,$03,$00,$02,$B6,$03 ; $0D80 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$87,$FF,$F3,$07,$E2,$FF,$F7,$00,$FF,$FF,$FF ; $0D8C raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$FF,$FF,$7F,$FF,$FF,$FF,$3F,$FC,$FF,$FF ; $0D98 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $1F,$FC,$FF,$FF,$0F,$F8,$FF,$FF,$07,$05,$0C,$00 ; $0DA4 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$40,$00,$00,$00,$00,$F0,$00,$00,$00,$00,$F0 ; $0DB0 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$00,$00,$80,$F0,$1E,$00,$00,$00,$FB,$06,$00 ; $0DBC raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$FF,$FF,$FF,$FC,$FF,$FF,$FF,$3F,$FC,$FF ; $0DC8 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$1F,$FC,$FF,$FF,$FF,$0F,$F8,$FF,$FF,$FF ; $0DD4 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $07,$F8,$FF,$FF,$FF,$03,$F8,$FF,$FF,$FF,$03,$04 ; $0DE0 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $0B,$40,$00,$00,$02,$40,$80,$00,$02,$40,$00,$07 ; $0DEC raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $02,$40,$00,$07,$02,$40,$F0,$07,$02,$FC,$F0,$07 ; $0DF8 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $F8,$FC,$FF,$FF,$7F,$FC,$FF,$FF,$3F,$F8,$FF,$FF ; $0E04 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $1F,$F0,$FF,$FF,$0F,$F0,$FF,$FF,$0F,$04,$0B,$80 ; $0E10 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$00,$00,$00,$00,$00,$01,$A0,$01,$00,$01,$A0 ; $0E1C raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $01,$00,$01,$F0,$01,$00,$01,$F8,$01,$00,$F9,$F8 ; $0E28 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$7F,$F0,$FF,$FF,$3F,$F0,$FF,$FF,$1F,$F0 ; $0E34 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $FF,$FF,$0F,$E0,$FF,$FF,$0F,$02,$06,$00,$03,$10 ; $0E40 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $07,$E0,$FF,$FF,$7F,$FF,$3F,$FF,$1F,$02,$0F,$10 ; $0E4C raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $00,$30,$02,$70,$01,$FC,$00,$F8,$11,$F0,$3B,$E0 ; $0E58 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $7F,$C0,$3F,$80,$1F,$00,$3F,$00,$1E,$00,$04,$00 ; $0E64 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $48,$00,$F8,$00,$F8,$01,$11,$10,$38,$38,$38,$38 ; $0E70 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $38,$38,$38,$38,$38,$38,$38,$38,$10,$10,$10,$38 ; $0E7C raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $01,$0E,$18,$18,$18,$18,$18,$18,$18,$18,$18,$18 ; $0E88 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $18,$18,$00,$18,$01,$09,$10,$10,$10,$10,$10,$10 ; $0E94 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $10,$10,$10,$01,$10,$10,$BA,$7C,$FE,$7C,$38,$54 ; $0EA0 raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $10,$00,$10,$00,$08,$00,$00,$04,$00,$3D,$3E,$3F ; $0EAC raw original bytes | ship / torpedo / explosion bitmap frames
+        DB $40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$47 ; $0EB8 raw original bytes | display strings and encoded glyph indexes
+        DB $41,$4D,$45,$40,$4F,$56,$45,$52,$48,$49,$47,$48 ; $0EC4 raw original bytes | display strings and encoded glyph indexes
+        DB $40,$53,$43,$4F,$52,$45,$40,$40,$40,$40,$40,$40 ; $0ED0 raw original bytes | display strings and encoded glyph indexes
+        DB $59,$4F,$55,$52,$40,$53,$43,$4F,$52,$45,$49,$4E ; $0EDC raw original bytes | display strings and encoded glyph indexes
+        DB $53,$45,$52,$54,$40,$43,$4F,$49,$4E,$50,$55,$53 ; $0EE8 raw original bytes | display strings and encoded glyph indexes
+        DB $48,$40,$42,$55,$54,$54,$4F,$4E,$53,$45,$41,$40 ; $0EF4 raw original bytes | display strings and encoded glyph indexes
+        DB $57,$4F,$4C,$46,$3A,$3B,$3C,$3B,$3C,$3A,$3B,$3C ; $0F00 raw original bytes | display strings and encoded glyph indexes
+        DB $3A,$3C,$3B,$3C,$3A,$3B,$3A,$3C,$3B,$3A,$3C,$3A ; $0F0C raw original bytes | display strings and encoded glyph indexes
+        DB $3B,$3C,$3A,$3C,$3B,$3C,$3A,$3B,$3C,$3A,$3B,$3C ; $0F18 raw original bytes | display strings and encoded glyph indexes
+
+; -----------------------------------------------------------------------------
+; DISPLAY_LEGEND_TABLE ($0F24) - Embedded display words and game-status layout data
+; -----------------------------------------------------------------------------
+DISPLAY_LEGEND_TABLE:
+        DB $42,$4F,$4E,$55,$53,$54,$49,$4D,$45,$2D,$53,$43 ; $0F24 raw original bytes | encoded display legend and control parameters
+        DB $4F,$52,$45,$45,$58,$54,$45,$4E,$44,$45,$44,$16 ; $0F30 raw original bytes | encoded display legend and control parameters
+        DB $54,$49,$4D,$45,$44,$0F,$4C,$0F,$01,$41,$04,$3D ; $0F3C raw original bytes | encoded display legend and control parameters
+        DB $5A,$2F,$50,$3F,$01,$41,$04,$3D,$57,$2F,$4D,$3F ; $0F48 raw original bytes | encoded display legend and control parameters
+
+; -----------------------------------------------------------------------------
+; BIT_ORDER_LOOKUP ($0F54) - Lookup data used by object placement and shifting
+; -----------------------------------------------------------------------------
+BIT_ORDER_LOOKUP:
+        DB $61,$71,$81,$91,$03,$03,$03,$01,$01,$07,$00,$08 ; $0F54 raw original bytes | bit-order / movement lookup
+        DB $18,$10,$38,$30,$20,$28,$78,$70,$60,$68,$40,$48 ; $0F60 raw original bytes | bit-order / movement lookup
+        DB $58,$50,$F8,$F0,$E0,$E8,$C0,$C8,$D8,$D0,$80,$88 ; $0F6C raw original bytes | bit-order / movement lookup
+        DB $98,$90,$B8,$B0,$A0,$A8,$0D,$3D,$20,$14,$00,$D8 ; $0F78 raw original bytes | object and graphic descriptor records
+        DB $00,$02,$0D,$7B,$20,$14,$00,$E0,$00,$02,$0D,$AD ; $0F84 raw original bytes | object and graphic descriptor records
+        DB $20,$14,$00,$D8,$00,$02,$0D,$EB,$20,$15,$00,$E0 ; $0F90 raw original bytes | object and graphic descriptor records
+        DB $00,$01,$0E,$19,$20,$15,$00,$E0,$00,$01,$0E,$47 ; $0F9C raw original bytes | object and graphic descriptor records
+        DB $20,$1A,$00,$F0,$00,$03,$0D,$3D,$40,$34,$00,$D8 ; $0FA8 raw original bytes | object and graphic descriptor records
+        DB $D8,$FE,$0D,$7B,$40,$34,$00,$E0,$E0,$FE,$0D,$AD ; $0FB4 raw original bytes | object and graphic descriptor records
+        DB $40,$34,$00,$D8,$D8,$FE,$0D,$EB,$40,$35,$00,$E0 ; $0FC0 raw original bytes | object and graphic descriptor records
+        DB $E0,$FF,$0E,$19,$40,$35,$00,$E0,$E0,$FF,$0E,$47 ; $0FCC raw original bytes | object and graphic descriptor records
+        DB $40,$3A,$00,$F0,$F0,$FD,$06,$04,$02,$06,$03,$05 ; $0FD8 raw original bytes | object and graphic descriptor records
+        DB $01 ; $0FE4 raw original bytes | object and graphic descriptor records
         rst $38                      ; $0FE5 : FF
         rst $38                      ; $0FE6 : FF
         rst $38                      ; $0FE7 : FF
