@@ -19,7 +19,7 @@ The original ROMs were compared against an independently annotated historic disa
 | `$0000–$03FF` | sw0041.h — reset, interrupts, core display/game services |
 | `$0400–$07FF` | sw0042.g — main game loop, indexed interpreter, movement/events |
 | `$0800–$0BFF` | sw0043.f — game programs, command/data tables, native routines |
-| `$0C00–$0FFF` | sw0044.e — further services, sprites and object data |
+| `$0C00–$0FFF` | sw0044.e — character graphics, display legends, ship/projectile frames and descriptor tables |
 | `$2000–$2001` | Interpreted game-program pointer |
 | `$2002–$2030` | Timers, credits, score, input and scheduler working state |
 | `$2031–$215E` | Ship, mine and torpedo object descriptors |
@@ -56,6 +56,26 @@ Build scripts use the supplied `tools/zmac` / `tools/zmac.exe` directly. They as
 mame seawolf -window -skip_gameinfo -rompath roms
 ```
 
+## ROM data and graphics organization
+
+The original ROM contains both native Intel 8080 routines and data consumed by those routines. The assembly now places named boundaries at the start of the game scripts, command-handler table, numeric glyphs, graphic ROM, display legends and lookup data. `DB` remains the correct assembly representation for bytecode operands, glyph raster rows, pixel patterns and mixed descriptor records; decoding their purpose does not turn them into machine instructions.
+
+| ROM range | Interpretation | Evidence |
+| --- | --- | --- |
+| `$0429–$0439` | Startup constants/data | Byte-exact boundary before startup entry at `$043A` |
+| `$0929–$09B8` | Interpreted game commands with inline operands | Interpreter at `$045E` reads command bytes through pointer `$2000` |
+| `$09B9–$09E7` | Lookup and dispatch-related byte data | Adjacent to native handler-address table |
+| `$09E8–$09FF` | Twelve 16-bit handler addresses | `$045E` indexes the table after fetching a nonzero command |
+| `$0B8F–$0BFF` | Numeric glyph patterns and adjacent graphic bytes | Character rendering reads `$0B8F` |
+| `$0C00–$0D3F` | Graphic header and character bitmap patterns | Byte patterns comprise raster rows, not native instructions |
+| `$0D40–$0EB7` | Object/explosion frames and display data | Sprite-like pixel masks and repeated packed rows |
+| `$0EB8–$0F53` | Encoded legends and control information | Embedded game text including GAME OVER, HIGH SCORE and INSERT COIN |
+| `$0F54–$0F77` | Byte-order/shift lookup data | Indexed values used in object/screen drawing |
+| `$0F78–$0FE4` | Object and graphic descriptors | ROM table referenced from `$0F7E` |
+| `$0FE5–$0FFF` | `$FF` fill bytes | Erased-ROM-style padding |
+
+The source contains an inline pixel visualization of the first numeric glyph. Use [the RE record](docs/SEA-WOLF-RE.md) for evidence levels, byte-boundary distinctions, and remaining verification work.
+
 ## The indexed game interpreter
 
 At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. Its native handlers implement game behavior, while command bytes and inline operands describe what happens next.
@@ -76,13 +96,13 @@ This is evidence of DNA's evolving **numbered native game-word** architecture, p
 ## Repository
 
 `src/seawolf.asm`  
-Original-address, mixed native-assembly/data disassembly of the four ROMs.
+Original-address, mixed native-assembly/data disassembly with named native routines, classified data and inline glyph rows.
 
 `build.sh` / `build.bat`  
 Original ROM reconstruction, splitting, SHA-1 verification and packaging.
 
 `images/seawolf-memory-map.svg`  
-Editable source diagram identifying ROM, interpreter, RAM and display domains.
+Editable source diagram identifying ROM, interpreter, graphic assets, RAM and display domains.
 
 `roms/original/seawolf.zip`  
 Reference MAME ROM set, retained unchanged.
@@ -91,3 +111,7 @@ Reference MAME ROM set, retained unchanged.
 Contemporary Sea Wolf service, graphics and sound documents.
 
 **Research context:** Gorf/TERSE follows a different Z80 direct-threaded execution model, not a direct bytecode continuation. The source baseline here is intended for the next DNA 8080 interpreter ancestry comparison.
+
+## Reverse-engineering progress
+
+The current pass names verified entry points and identifies all existing `DB` statements by data category. It does not assert that every internal branch has a recovered function name or that every embedded game-command operand has been fully decoded. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
