@@ -2022,18 +2022,33 @@ L0B5F:
         dec a                        ; $0B6D : 3D
         jp nz,$0B30                  ; $0B6E : C2 30 0B | Next char
         ret                          ; $0B71 : C9
+
+; -----------------------------------------------------------------------------
+; SCRIPT_STORE_STATE_2010 ($0B72) - Store next inline script byte at $2010
+; -----------------------------------------------------------------------------
+SCRIPT_STORE_STATE_2010:
         ex de,hl                     ; $0B72 : EB
         ld a,(hl)                    ; $0B73 : 7E | Argument
         inc hl                       ; $0B74 : 23
         ld ($2000),hl                ; $0B75 : 22 00 20
         ld ($2010),a                 ; $0B78 : 32 10 20 | Store ??
         ret                          ; $0B7B : C9
+
+; -----------------------------------------------------------------------------
+; SCRIPT_STORE_STATE_2011 ($0B7C) - Store next inline script byte at $2011
+; -----------------------------------------------------------------------------
+SCRIPT_STORE_STATE_2011:
         ex de,hl                     ; $0B7C : EB
         ld a,(hl)                    ; $0B7D : 7E | Argument
         inc hl                       ; $0B7E : 23
         ld ($2000),hl                ; $0B7F : 22 00 20
         ld ($2011),a                 ; $0B82 : 32 11 20 | Store ??
         ret                          ; $0B85 : C9
+
+; -----------------------------------------------------------------------------
+; SCRIPT_JUMP_ABSOLUTE ($0B86) - Load little-endian inline jump target into script pointer
+; -----------------------------------------------------------------------------
+SCRIPT_JUMP_ABSOLUTE:
         ex de,hl                     ; $0B86 : EB
         ld e,(hl)                    ; $0B87 : 5E
         inc hl                       ; $0B88 : 23
