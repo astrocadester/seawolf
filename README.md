@@ -43,7 +43,7 @@ chmod +x build.sh
 build.bat
 ```
 
-Build scripts use the supplied `tools/zmac` / `tools/zmac.exe` directly. They assemble `src/seawolf.asm`, split it into four 1 KB chip files, verify the official original-ROM SHA-1 values, and package `roms/seawolf.zip` for MAME. No Python, Maven, or GitHub Actions.
+Build scripts use bundled `tools/zmac` / `tools/zmac.exe` v1.3 directly. They write the assembled image, listing and four 1 KB chip files to ignored `build/`, verify the original-ROM SHA-1 values, then package the ignored `roms/seawolf.zip` for MAME. No `zout` output directory is used. No Python, Maven, or GitHub Actions.
 
 | ROM | Address | SHA-1 |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ mame seawolf -window -skip_gameinfo -rompath roms
 
 ## ROM data and graphics organization
 
-The original ROM contains both native Intel 8080 routines and data consumed by those routines. The assembly now places named boundaries at the start of the game scripts, command-handler table, numeric glyphs, graphic ROM, display legends and lookup data. `DB` remains the correct assembly representation for bytecode operands, glyph raster rows, pixel patterns and mixed descriptor records; decoding their purpose does not turn them into machine instructions.
+The original ROM contains both native Intel 8080 routines and data consumed by those routines. The assembly now uses the Checkmate-style source header, native routine and branch names, inline raster rows for each numeric and uppercase character glyph, and named boundaries for interpreter and graphics data. `DB` remains the correct assembly representation for bytecode operands, glyph raster rows, pixel patterns and mixed descriptor records; decoding their purpose does not turn them into machine instructions.
 
 | ROM range | Interpretation | Evidence |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ The original ROM contains both native Intel 8080 routines and data consumed by t
 | `$0F78–$0FE4` | Object and graphic descriptors | ROM table referenced from `$0F7E` |
 | `$0FE5–$0FFF` | `$FF` fill bytes | Erased-ROM-style padding |
 
-The source contains an inline pixel visualization of the first numeric glyph. Use [the RE record](docs/SEA-WOLF-RE.md) for evidence levels, byte-boundary distinctions, and remaining verification work.
+All 36 numeric and uppercase font glyphs are individually labeled, with their ten raster bytes and pixel patterns shown inline. Use [the RE record](docs/SEA-WOLF-RE.md) for evidence levels, byte-boundary distinctions, and remaining verification work.
 
 ## The indexed game interpreter
 
@@ -96,7 +96,7 @@ This is evidence of DNA's evolving **numbered native game-word** architecture, p
 ## Repository
 
 `src/seawolf.asm`  
-Original-address, mixed native-assembly/data disassembly with named native routines, classified data and inline glyph rows.
+Original-address, mixed native-assembly/data disassembly with named native routines and branches, classified game-command data, and all 36 inline font glyphs.
 
 `build.sh` / `build.bat`  
 Original ROM reconstruction, splitting, SHA-1 verification and packaging.
@@ -105,7 +105,13 @@ Original ROM reconstruction, splitting, SHA-1 verification and packaging.
 Editable source diagram identifying ROM, interpreter, graphic assets, RAM and display domains.
 
 `roms/original/seawolf.zip`  
-Reference MAME ROM set, retained unchanged.
+Tracked original reference ROM set, retained unchanged.
+
+`build/`  
+Ignored generated image, listing and four split ROM chips.
+
+`roms/seawolf.zip`  
+Ignored generated MAME ROM set.
 
 `docs/`  
 Contemporary Sea Wolf service, graphics and sound documents.
@@ -114,4 +120,4 @@ Contemporary Sea Wolf service, graphics and sound documents.
 
 ## Reverse-engineering progress
 
-The current pass names verified entry points and identifies all existing `DB` statements by data category. It does not assert that every internal branch has a recovered function name or that every embedded game-command operand has been fully decoded. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
+The source now replaces all original address-only `Lxxxx` labels with contextual labels and uses Checkmate's compact header, spacing and inline-graphics conventions. Label names are RE descriptions, not claimed original DNA identifiers. Interpreted command operand formats and non-font graphic records still require detailed functional verification. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
