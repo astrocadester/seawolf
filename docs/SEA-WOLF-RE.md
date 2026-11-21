@@ -44,10 +44,10 @@ The script/data region begins at `$0929`. This is not assembly code; inline valu
 
 | ID | Status | Verification criterion |
 | --- | --- | --- |
-| SW-RE-001 | Partial | Named 53 existing native entries and classified 114 existing DB lines; continue to determine exact internal branch roles for 111 remaining address labels |
+| SW-RE-001 | Partial | Replaced all 111 remaining address-only branch labels with context names; labels and branch roles remain reviewable against execution tracing |
 | SW-RE-002 | Partial | Fully decode command $01–$0C operand formats and each handler's register/stack contract, including control command $00 |
 | SW-RE-003 | Partial | Identify each graphics asset's record length and meaning from actual render callers and compare frames against original running ROM |
-| SW-RE-004 | Open | Rework character graphic rows into verified per-character boundaries with literal inline bit visualizations |
+| SW-RE-004 | Open | All 36 font glyphs now have ten explicit bytes and pixel rows; rendered display validation remains open |
 | SW-RE-005 | Open | Separate object descriptor records and annotate complete fields/stride with call-site evidence |
 | SW-RE-006 | Open | Build with `./build.sh` using bundled zmac v1.3; confirm the 4096-byte image and all four SHA-1 hashes |
 | SW-RE-007 | Open | Run `mame seawolf -rompath roms -window -skip_gameinfo`, verify input, sound, score, sprites and game progression |
@@ -55,8 +55,8 @@ The script/data region begins at `$0929`. This is not assembly code; inline valu
 
 ## Verification record
 
-**Performed:** Repository source inspection, classification of indexed interpreter data and bitmap rows, mechanical source-label edits, README and memory-map source update.
+**Performed:** Direct Checkmate source-style comparison, source-label naming pass (no remaining `Lxxxx` labels), 36 inline 8×10 font glyphs, script/data classification, README/memory-map edits, and output path/ignore changes. Static named CALL/JP target checks were run and found no missing symbols.
 
-**Not performed:** Native zmac invocation, checksum verification of newly assembled output, MAME execution, physical cabinet execution.
+**Not performed:** Native zmac invocation, checksum verification of newly assembled output, MAME execution, physical cabinet execution. The updated build writes to `build/` and creates ignored `roms/seawolf.zip`.
 
 No ROM payload, build toolchain, interpreter, XC, original reference images or hardware interface has been deliberately changed. The ROM checksum gate remains mandatory before merge.
