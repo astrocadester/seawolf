@@ -1825,23 +1825,33 @@ GAME_SCRIPT_AUXILIARY:
         DB $01,$0F,$00,$03,$04,$09,$29,$0F,$0E,$3C,$07,$28
         DB $22,$20,$07,$0A,$21,$20,$0B
 
-; Bit mask and input lookup bytes ($09B9).
-GAME_INPUT_MASKS:
+; Nine original packed input-code values ($09B9).
+PLAYER_INPUT_CODES_A:
         DB $00,$48,$44,$42,$41,$88,$84,$82,$81
 
-; Input bit field table ($09C2).
-GAME_INPUT_BIT_TABLE:
+; Eight additional packed input-code values ($09C2).
+PLAYER_INPUT_CODES_B:
         DB $18,$14,$12,$11,$28,$24,$22,$21
 
-; Input edge lookup ($09CA).
-GAME_INPUT_EDGE_TABLE:
-        DB $C8,$08,$F8,$08,$C7,$08,$C7,$08,$4D,$08,$C7,$08
-        DB $C7,$08,$C7,$08
-
-; Input debounce lookup ($09DA).
-GAME_INPUT_DEBOUNCE_TABLE:
-        DB $C7,$08,$C7,$08,$C7,$08,$C7,$08,$C7,$08,$7B,$05
-        DB $C7,$08
+; Fifteen little-endian native address entries, $09CA–$09E7.
+; This is pointer data, not an input debounce routine.
+GAME_SERVICE_VECTOR_TABLE:
+        DW $08C8
+        DW $08F8
+        DW $08C7
+        DW $08C7
+        DW $084D
+        DW $08C7
+        DW $08C7
+        DW $08C7
+GAME_SERVICE_VECTOR_SUBTABLE:
+        DW $08C7
+        DW $08C7
+        DW $08C7
+        DW $08C7
+        DW $08C7
+        DW $057B
+        DW $08C7
 
 ; Indexed 16-bit native handler addresses, little endian.
 ; Twelve 16-bit native handler vectors indexed by nonzero commands $01–$0C.
@@ -2778,7 +2788,7 @@ FONT_LETTER_Z:
 OBJECT_GRAPHICS:
 
 ; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_0:
+OBJECT_GRAPHIC_0:
         DB $05,$0C  ; width in bytes, height in rows
         DB $00,$00,$08,$00,$00
         DB $00,$00,$08,$00,$00
@@ -2793,7 +2803,7 @@ SHIP_GRAPHIC_0:
         DB $FE,$FF,$FF,$FF,$1F
         DB $FE,$FF,$FF,$FF,$0F
 ; Four-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_1:
+OBJECT_GRAPHIC_1:
         DB $04,$0C  ; width in bytes, height in rows
         DB $00,$00,$03,$00
         DB $00,$36,$03,$00
@@ -2808,7 +2818,7 @@ SHIP_GRAPHIC_1:
         DB $FC,$FF,$FF,$0F
         DB $F8,$FF,$FF,$07
 ; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_2:
+OBJECT_GRAPHIC_2:
         DB $05,$0C  ; width in bytes, height in rows
         DB $00,$00,$40,$00,$00
         DB $00,$00,$F0,$00,$00
@@ -2823,7 +2833,7 @@ SHIP_GRAPHIC_2:
         DB $F8,$FF,$FF,$FF,$03
         DB $F8,$FF,$FF,$FF,$03
 ; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_3:
+OBJECT_GRAPHIC_3:
         DB $04,$0B  ; width in bytes, height in rows
         DB $40,$00,$00,$02
         DB $40,$80,$00,$02
@@ -2837,7 +2847,7 @@ SHIP_GRAPHIC_3:
         DB $F0,$FF,$FF,$0F
         DB $F0,$FF,$FF,$0F
 ; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_4:
+OBJECT_GRAPHIC_4:
         DB $04,$0B  ; width in bytes, height in rows
         DB $80,$00,$00,$00
         DB $00,$00,$00,$01
@@ -2851,7 +2861,7 @@ SHIP_GRAPHIC_4:
         DB $F0,$FF,$FF,$0F
         DB $E0,$FF,$FF,$0F
 ; Two-byte rows, six lines. Raw graphics data; rendering polarity and mask semantics unverified.
-SHIP_GRAPHIC_5:
+OBJECT_GRAPHIC_5:
         DB $02,$06  ; width in bytes, height in rows
         DB $00,$03
         DB $10,$07
