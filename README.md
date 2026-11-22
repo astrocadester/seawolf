@@ -65,7 +65,8 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 | `$0929–$0962` | Initial interpreted command stream |
 | `$0963–$09A5` | Secondary command stream |
 | `$09A6–$09B8` | Auxiliary script/data |
-| `$09B9–$09E7` | Input/lookup bytes with identified reference points |
+| `$09B9–$09C9` | Two packed input-code tables |
+| `$09CA–$09E7` | Fifteen little-endian native service addresses (`DW`) |
 | `$09E8–$09FF` | 12 little-endian native handler vectors (`DW`) |
 | `$0B8F–$0BF2` | Ten labeled 8×10 digit glyphs |
 | `$0BF3–$0BFF` | 13 trailing graphic bytes, individual bitmap rows |
@@ -81,7 +82,7 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 
 | `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
 
-Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original rows are grouped by record, but unverified bitmap interpretations are no longer displayed as finished ship artwork; the prominent `$FF` areas require blitter and mask/polarity tracing. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
+Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original rows are grouped by record, but unverified bitmap interpretations are no longer displayed as finished ship artwork; the prominent `$FF` areas require renderer and mask/polarity tracing. These assets are now named `OBJECT_GRAPHIC_*`, not identified as specific ships. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
 
 The display text is expressed as literal assembly strings with the original `$40` spacing byte (`TEXT_SPACE`), including `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
 
