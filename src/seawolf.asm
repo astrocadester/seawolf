@@ -942,7 +942,7 @@ GAME_COMMAND_DISPATCH:
         LD A,($2002)
         AND A
         RET Z
-        CALL OBJECT_SEARCH_START
+        CALL SCAN_HIT_OBJECTS
         CALL POLL_PLAYER_INPUT
         JP GAME_TIME_SERVICE
 
@@ -968,7 +968,7 @@ GAME_TIME_SERVICE:
         RET M
         LD BC,$2002
         LD DE,$21E9
-        CALL OBJECT_EXTRACT_FIELD_BITS
+        CALL FORMAT_BCD_SCORE_BYTE
         EX DE,HL
         CALL TEST_OBJECT_FLAGS
         INC HL
@@ -976,7 +976,7 @@ GAME_TIME_SERVICE:
         INC HL
         EX DE,HL
         LD BC,$202B
-        CALL OBJECT_EXTRACT_FIELD_BITS
+        CALL FORMAT_BCD_SCORE_BYTE
         EX DE,HL
         CALL TEST_OBJECT_FLAGS
         INC HL
@@ -1335,7 +1335,7 @@ CLEAR_OBJECT_RECORD:
         LD HL,$21C1
 
 ; Object clear if active.
-OBJECT_CLEAR_IF_ACTIVE:
+PROCESS_PENDING_SHIP_HIT:
         LD A,(HL)
         AND A
         RET Z
@@ -1346,11 +1346,11 @@ OBJECT_CLEAR_IF_ACTIVE:
         LD HL,$2024
         LD BC,$000D
 
-; Object offset accumulate.
-OBJECT_OFFSET_ACCUMULATE:
+; Find the selected ship's 13-byte RAM record.
+FIND_HIT_SHIP_RECORD:
         ADD HL,BC
         DEC A
-        JP NZ,OBJECT_OFFSET_ACCUMULATE
+        JP NZ,FIND_HIT_SHIP_RECORD
         LD BC,$0008
         ADD HL,BC
         LD (HL),$0E
@@ -1370,19 +1370,19 @@ OBJECT_OFFSET_ACCUMULATE:
         LD (HL),$E0
         LD A,($2002)
         AND A
-        JP NZ,OBJECT_LOOKUP_INDEX
+        JP NZ,AWARD_SHIP_HIT_SCORE
         POP HL
         RET
 
-; Object lookup index.
-OBJECT_LOOKUP_INDEX:
+; Add the awarded score from the selected ship-value lookup.
+AWARD_SHIP_HIT_SCORE:
         LD A,B
         LD BC,$0F57
         AND $07
         ADD A,C
         LD C,A
         LD DE,$21E9
-        CALL OBJECT_EXTRACT_FIELD_BITS
+        CALL FORMAT_BCD_SCORE_BYTE
         LD A,$30
         LD (DE),A
         INC DE
@@ -1401,11 +1401,11 @@ OBJECT_LOOKUP_INDEX:
         LD A,B
         ADD A,$20
         LD HL,$09C2
-        JP C,OBJECT_COORDINATE_SHIFT_LEFT
+        JP C,TRIGGER_HIT_LAMP_AND_SOUND
         LD HL,$09BA
 
 ; Object coordinate shift left.
-OBJECT_COORDINATE_SHIFT_LEFT:
+TRIGGER_HIT_LAMP_AND_SOUND:
         LD A,C
         RLCA
         RLCA
@@ -1422,44 +1422,44 @@ OBJECT_COORDINATE_SHIFT_LEFT:
         LD A,B
         LD D,$24
         ADD A,$20
-        JP M,OBJECT_COORDINATE_SHIFT_RIGHT
+        JP M,MAP_HIT_DISPLAY_POSITION
         LD D,$28
 
 ; Object coordinate shift right.
-OBJECT_COORDINATE_SHIFT_RIGHT:
+MAP_HIT_DISPLAY_POSITION:
         LD A,C
         RRCA
         RRCA
         RRCA
         AND $1F
-        JP Z,OBJECT_COORDINATE_LIMIT
+        JP Z,CLAMP_HIT_DISPLAY_POSITION
         DEC A
 
 ; Object coordinate limit.
-OBJECT_COORDINATE_LIMIT:
+CLAMP_HIT_DISPLAY_POSITION:
         CP $1E
-        JP NZ,OBJECT_SET_ACTIVE_COORDINATE
+        JP NZ,DRAW_HIT_SCORE_INDICATOR
         DEC A
 
 ; Object set active coordinate.
-OBJECT_SET_ACTIVE_COORDINATE:
+DRAW_HIT_SCORE_INDICATOR:
         OR $A0
         LD E,A
-        CALL SEARCH_ACTIVE_OBJECTS
+        CALL ALLOCATE_HIT_EFFECT_SLOT
         LD A,$2D
         LD ($2024),A
         LD HL,$21EA
         LD A,$03
         CALL RENDER_GAME_TEXT
         POP HL
-        JP OBJECT_CLEAR_IF_ACTIVE
+        JP PROCESS_PENDING_SHIP_HIT
 
-; Object search start.
-OBJECT_SEARCH_START:
+; Begin collision and hit-resolution scan at $21A3.
+SCAN_HIT_OBJECTS:
         LD HL,$21A3
 
-; Object search next.
-OBJECT_SEARCH_NEXT:
+; Process the next active collision candidate.
+SCAN_NEXT_HIT_OBJECT:
         LD A,(HL)
         AND A
         RET Z
@@ -1473,21 +1473,21 @@ OBJECT_SEARCH_NEXT:
         LD BC,$000D
         EX DE,HL
 
-; Object search advance offset.
-OBJECT_SEARCH_ADVANCE_OFFSET:
+; Select the affected ship record using a 13-byte record stride.
+LOCATE_HIT_TARGET_RECORD:
         ADD HL,BC
         ADD HL,BC
         DEC A
-        JP NZ,OBJECT_SEARCH_ADVANCE_OFFSET
+        JP NZ,LOCATE_HIT_TARGET_RECORD
         LD A,(DE)
         SUB $08
         SUB (HL)
         CP $EC
-        JP NC,OBJECT_MARK_RECORD_INACTIVE
+        JP NC,PROCESS_HIT_OBJECT
         ADD HL,BC
 
-; Object mark record inactive.
-OBJECT_MARK_RECORD_INACTIVE:
+; Mark the matched ship record and prepare hit-effect display coordinates.
+PROCESS_HIT_OBJECT:
         DEC HL
         DEC HL
         LD (HL),$00
@@ -1505,20 +1505,20 @@ OBJECT_MARK_RECORD_INACTIVE:
         CALL BIT_SHIFT_SETUP
         LD A,E
         AND $1F
-        JP Z,OBJECT_RESOLVE_SCAN_ENTRY
+        JP Z,RENDER_HIT_EFFECT
         DEC A
-        JP Z,OBJECT_RESOLVE_SCAN_ENTRY
+        JP Z,RENDER_HIT_EFFECT
 
-; Object adjust scan index.
-OBJECT_ADJUST_SCAN_INDEX:
+; Normalize the display coordinate before rendering hit feedback.
+NORMALIZE_HIT_EFFECT_POSITION:
         DEC A
         CP $1C
-        JP P,OBJECT_ADJUST_SCAN_INDEX
+        JP P,NORMALIZE_HIT_EFFECT_POSITION
 
-; Object resolve scan entry.
-OBJECT_RESOLVE_SCAN_ENTRY:
+; Render the scored hit indication: reserve screen entry, sound, timers and three text fragments.
+RENDER_HIT_EFFECT:
         LD E,A
-        CALL SEARCH_ACTIVE_OBJECTS
+        CALL ALLOCATE_HIT_EFFECT_SLOT
         LD B,D
         INC B
         INC B
@@ -1560,19 +1560,19 @@ OBJECT_RESOLVE_SCAN_ENTRY:
         LD A,$03
         CALL RENDER_GAME_TEXT
         POP HL
-        JP OBJECT_SEARCH_NEXT
+        JP SCAN_NEXT_HIT_OBJECT
 
-; Find a matching active object.
-SEARCH_ACTIVE_OBJECTS:
+; Allocate the next free two-byte entry in the hit-effect coordinate list at $21F0.
+ALLOCATE_HIT_EFFECT_SLOT:
         LD HL,$21F0
 
-; Active object compare fields.
-ACTIVE_OBJECT_COMPARE_FIELDS:
+; Search the hit-effect list until an unused zero word is found.
+FIND_FREE_HIT_EFFECT_SLOT:
         LD A,(HL)
         INC HL
         OR (HL)
         INC HL
-        JP NZ,ACTIVE_OBJECT_COMPARE_FIELDS
+        JP NZ,FIND_FREE_HIT_EFFECT_SLOT
         DEC HL
         LD (HL),E
         DEC HL
@@ -1972,7 +1972,7 @@ CMD_RENDER_SCORE:
         INC HL
         LD D,(HL)
         DEC HL
-        CALL OBJECT_EXTRACT_FIELD_BITS
+        CALL FORMAT_BCD_SCORE_BYTE
         EX DE,HL
         CALL TEST_OBJECT_FLAGS
         INC HL
@@ -1998,8 +1998,8 @@ TEST_OBJECT_FLAGS:
         LD (HL),$30
         RET
 
-; Object extract field bits.
-OBJECT_EXTRACT_FIELD_BITS:
+; Convert packed BCD score byte into two display glyph codes.
+FORMAT_BCD_SCORE_BYTE:
         LD A,(BC)
         RRA
         RRA
