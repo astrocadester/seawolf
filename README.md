@@ -75,13 +75,15 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 | `$0EB5–$0F03` | Display control, packed messages and symbol sequences |
 | `$0F24–$0F53` | Display text/legend and control parameters |
 | `$0F54–$0F77` | Movement/bit-pattern lookup |
-| `$0F78–$0FD7` | Twelve 8-byte object records, each with a graphic pointer |
-| `$0FD8–$0FE4` | Thirteen object-control bytes |
+| `$0F78–$0F7D` | Six-byte position-lookup tail preceding the object records |
+| `$0F7E–$0FDD` | Twelve eight-byte object records, graphic pointer at bytes 0–1 |
+| `$0FDE–$0FE4` | Seven trailing object-control bytes |
+
 | `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
 
-Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The 12 object records store graphics pointers high-byte first, so those fields must not be converted blindly to little-endian `DW`.
+Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original rows are grouped by record, but unverified bitmap interpretations are no longer displayed as finished ship artwork; the prominent `$FF` areas require blitter and mask/polarity tracing. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
 
-The display text includes `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
+The display text is expressed as literal assembly strings with the original `$40` spacing byte (`TEXT_SPACE`), including `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
 
 The `$FF` tail is **data**, not 27 active `RST $38` instructions. `$FF` happens to decode as `RST 7` (vector `$0038`) if executed, but no execution edge to this fill region has been established.
 
