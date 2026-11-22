@@ -20,8 +20,8 @@ TEXT_SPACE EQU $40
 
 ; Sea Wolf indexed command byte definitions (native dispatcher at $045E).
 SCRIPT_FRAME_CONTROL             EQU $00
-SCRIPT_STORE_STATE_2011          EQU $01
-SCRIPT_STORE_STATE_2010          EQU $02
+SCRIPT_OPCODE_STORE_2011          EQU $01
+SCRIPT_OPCODE_STORE_2010          EQU $02
 SCRIPT_INITIALIZE_GAME           EQU $03
 SCRIPT_RENDER_TEXT               EQU $04
 SCRIPT_READ_PORT                 EQU $05
@@ -1858,7 +1858,7 @@ GAME_SCRIPT_STREAMS:
         DW $3E35  ; video destination
 
 ; $94C Set byte at $2010.
-        DB SCRIPT_STORE_STATE_2010
+        DB SCRIPT_OPCODE_STORE_2010
         DB $0F
 
 ; $94E Render text: count, source, destination.
@@ -1868,7 +1868,7 @@ GAME_SCRIPT_STREAMS:
         DW $2C0B  ; video destination
 
 ; $954 Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $1E
 
 ; $956 Yield to native frame/control services.
@@ -1881,7 +1881,7 @@ GAME_SCRIPT_STREAMS:
         DW $2C0B  ; video destination
 
 ; $95D Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $1E
 
 ; $95F Yield to native frame/control services.
@@ -1922,7 +1922,7 @@ GAME_SCRIPT_SECONDARY:
         DW $0EF1  ; second message
 
 ; $980 Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $5A
 
 ; $982 Yield to native frame/control services.
@@ -1935,7 +1935,7 @@ GAME_SCRIPT_SECONDARY:
         DB $EB,$0D,$20,$15,$00,$E0,$00,$01,$C4  ; payload
 
 ; $990 Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $5A
 
 ; $992 Yield to native frame/control services.
@@ -1948,7 +1948,7 @@ GAME_SCRIPT_SECONDARY:
         DB $75,$0E,$9C,$E0,$FA,$00,$A8,$00,$C0  ; payload
 
 ; $9A0 Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $B4
 
 ; $9A2 Yield to native frame/control services.
@@ -1961,7 +1961,7 @@ GAME_SCRIPT_SECONDARY:
 GAME_SCRIPT_AUXILIARY:
 
 ; $9A6 Set byte at $2011.
-        DB SCRIPT_STORE_STATE_2011
+        DB SCRIPT_OPCODE_STORE_2011
         DB $0F
 
 ; $9A8 Yield to native frame/control services.
