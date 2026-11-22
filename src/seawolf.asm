@@ -697,27 +697,27 @@ CLEAR_ACTIVE_OBJECT:
         EX DE,HL
         LD B,C
 
-; Object clear setup.
-OBJECT_CLEAR_SETUP:
+; Begin clearing a video-memory column.
+CLEAR_VIDEO_COLUMN_BEGIN:
         XOR A
         PUSH HL
 
-; Object clear bytes loop.
-OBJECT_CLEAR_BYTES_LOOP:
+; Clear bytes in the current video-memory column.
+CLEAR_VIDEO_COLUMN_BYTES:
         LD (HL),A
         INC HL
         DEC C
-        JP NZ,OBJECT_CLEAR_BYTES_LOOP
+        JP NZ,CLEAR_VIDEO_COLUMN_BYTES
         LD DE,$0020
         POP HL
         ADD HL,DE
         LD C,B
         LD A,L
         AND $E0
-        JP NZ,OBJECT_CLEAR_SETUP
+        JP NZ,CLEAR_VIDEO_COLUMN_BEGIN
         LD A,H
         RRA
-        JP C,OBJECT_CLEAR_SETUP
+        JP C,CLEAR_VIDEO_COLUMN_BEGIN
         RET
 
 ; Select the next active object descriptor.
@@ -726,28 +726,28 @@ ADVANCE_OBJECT_CURSOR:
         LD B,$0A
         LD A,L
         OR H
-        JP NZ,OBJECT_CURSOR_STRIDE_SETUP
+        JP NZ,SET_SHIP_SCAN_STRIDE
         LD HL,$2072
 
-; Object cursor stride setup.
-OBJECT_CURSOR_STRIDE_SETUP:
+; Initialize 13-byte ship record stepping.
+SET_SHIP_SCAN_STRIDE:
         LD DE,$000D
 
-; Object cursor next record.
-OBJECT_CURSOR_NEXT_RECORD:
+; Advance to next ship record, wrapping at the end.
+SCAN_NEXT_SHIP_RECORD:
         ADD HL,DE
         DEC B
         RET Z
         LD A,L
         CP $E7
-        JP NZ,OBJECT_CURSOR_SAVE_ACTIVE
+        JP NZ,UPDATE_ACTIVE_SHIP_POSITION
         LD HL,$207F
 
-; Object cursor save active.
-OBJECT_CURSOR_SAVE_ACTIVE:
+; Update the selected active ship's position.
+UPDATE_ACTIVE_SHIP_POSITION:
         LD A,(HL)
         AND A
-        JP P,OBJECT_CURSOR_NEXT_RECORD
+        JP P,SCAN_NEXT_SHIP_RECORD
         LD ($2014),HL
         INC HL
         LD A,(HL)
@@ -1300,11 +1300,11 @@ SELECT_OBJECT_RECORD:
         LD HL,$202C
         LD DE,$000D
 
-; Object select next stride.
-OBJECT_SELECT_NEXT_STRIDE:
+; Advance to the selected ship's 13-byte RAM record.
+ADVANCE_SHIP_RECORD_STRIDE:
         ADD HL,DE
         DEC A
-        JP NZ,OBJECT_SELECT_NEXT_STRIDE
+        JP NZ,ADVANCE_SHIP_RECORD_STRIDE
         LD A,B
         EX DE,HL
         LD HL,$201E
@@ -1312,14 +1312,14 @@ OBJECT_SELECT_NEXT_STRIDE:
         INC (HL)
         LD HL,$0F7E
         RRA
-        JP NC,OBJECT_INDEX_ROTATE
+        JP NC,SELECT_SHIP_TEMPLATE_OFFSET
         LD HL,$0FAE
         LD A,B
         OR $10
         LD B,A
 
-; Object index rotate.
-OBJECT_INDEX_ROTATE:
+; Calculate the eight-byte ship template index.
+SELECT_SHIP_TEMPLATE_OFFSET:
         LD A,B
         DEC A
         RLCA
