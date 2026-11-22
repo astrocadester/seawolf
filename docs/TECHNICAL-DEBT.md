@@ -31,3 +31,7 @@ Style/layout follow-up: all original `Lxxxx` labels have been replaced with cont
 - `$0BF3–$0BFF` and `$0C00–$0C38` are bounded raster/control data; no invented glyph purpose is assigned beyond what the bytes establish.
 
 Resolved labeling defect: `$09CA–$09E7` contains 15 native two-byte pointer values; former input-edge/debounce names were speculative. Graphic data still requires hardware blitter polarity and masking review before any ASCII art can be treated as a faithful ship rendering.
+
+## Graphics research gate — 2026-11-21
+
+The first six ROM records are proven ship assets from the $064A–$06A3 spawn path and two descriptor banks. Source code and MAME confirm port $03 normal output versus port $00 reversed output, selected by object direction bit $10. Byte-exact zero-shift previews were added; full per-position shifted compositing and onscreen screenshot comparison remain open. The MAME runtime and four-ROM SHA-1 tests remain outstanding.
