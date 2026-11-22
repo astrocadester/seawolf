@@ -36,7 +36,7 @@ The script/data region begins at `$0929`. This is not assembly code; inline valu
 
 ### Game-command data and handler vectors
 
-`$0929–$09E7` is 191 bytes, divided at code-referenced boundaries `$0929`, `$0963`, `$09A6`, `$09BA`, `$09C2`, `$09CA`, and `$09DA` (the first table currently begins at `$09B9`; the `$09BA` reference enters one byte into it). The labels delimit selected streams, input masks and lookup segments; their full operand grammars are not yet asserted. `$09E8–$09FF` comprises 12 little-endian handler vectors, now expressed as native zmac `DW` words. They are not an additional executable program stream.
+`$0929–$09E7` is 191 bytes, divided at code-referenced boundaries `$0929`, `$0963`, `$09A6`, `$09BA`, `$09C2`, `$09CA`, and `$09DA` (the first table currently begins at `$09B9`; the `$09BA` reference enters one byte into it). The labels delimit selected streams, packed input-code values and an additional native service address table; their full operand grammars are not yet asserted. `$09E8–$09FF` comprises 12 little-endian handler vectors, now expressed as native zmac `DW` words. They are not an additional executable program stream.
 
 ### Character graphics and prefixes
 
@@ -66,7 +66,7 @@ A record consists of **one byte width (bytes per scanline), one byte height (sca
 | 9 | `$0E98–$0EA2` | 1 × 9 | 9 bytes |
 | 10 | `$0EA3–$0EB4` | 1 × 16 | 16 bytes |
 
-The source retains each record's two-byte header and grouped raster rows. Misleading ASCII ship pictures were removed: broad runs of `$FF` must be interpreted through the original renderer and mask/polarity behavior before reconstructing visual shapes. Row/record byte boundaries are established, but object identity is not. **Precise onscreen identities, orientation and collision purposes still require target-side confirmation.**
+The source retains each record's two-byte header and grouped raster rows and now calls the first six `OBJECT_GRAPHIC_*` rather than assuming that they are directly drawable ship sprites. Misleading ASCII ship pictures were removed: broad runs of `$FF` must be interpreted through the original renderer and mask/polarity behavior before reconstructing visual shapes. Row/record byte boundaries are established, but object identity is not. **Precise onscreen identities, orientation and collision purposes still require target-side confirmation.**
 
 ### Encoded text
 
