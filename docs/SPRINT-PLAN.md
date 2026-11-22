@@ -21,3 +21,10 @@ Latest source cleanup: the `$09CA–$09E7` bytes resolve to fifteen native addre
 - All 12 `GAME_COMMAND_HANDLER_TABLE` entries now use actual native entry labels and have command number/effect inline; `$01` is the `RET` at `$08C7`.
 - Verified that `$0F7E` and `$0FAE` select two directional groups of six ships. The alternate path sets flag `$10` and uses reversed MB14241 output at `$01B8`, while the normal path at `$0192` reads port `$03`.
 - New `images/seawolf-graphics-re.svg` shows all eleven original graphics records in normal and reversed bit orientation at shift zero. Follow-up: verify every shift/placement value with MAME execution, not standalone render assumptions.
+
+## SW-RE interpreted scripts and hit-path labels — 2026-11-21
+
+- Verified the indexed dispatcher uses `RLCA` before indexing `$09E8`, making the first word the reserved `$00` return-vector slot. The actual eleven indexed handlers run from `$01` through `$0B`. Fixed source and master command-table documentation.
+- Decoded `$0929–$09B8`: 34 command records (13 initial, 14 secondary, 7 auxiliary) across 144 original bytes. Named opcodes, `DB` scalar operands and `DW` pointer fields now preserve the exact original byte image, verified against the original `main` assembly source byte-for-byte.
+- Renamed `OBJECT_RESOLVE_SCAN_ENTRY` to `RENDER_HIT_EFFECT` and 23 additional generic object/control labels to hit-detection, score/BCD, video clear, ship record and template-selection names. Descriptive source comments aligned with caller evidence.
+- Merge gates remain bundled zmac v1.3, four original ROM SHA-1 hashes and MAME runtime. Byte-level source comparison is a separate static check.
