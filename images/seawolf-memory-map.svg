@@ -74,7 +74,7 @@
 <text x="62" y="822">$0929 / $0963 / $09A6 Game command streams</text>
 <text x="62" y="853">$09E8 Twelve native handler vectors</text>
 <text x="62" y="884">$0B8F Digits 0–9    $0C39 Letters A–Z</text>
-<text x="62" y="915">$0D3D–$0E74 Object graphics and bit masks</text>
-<text x="62" y="946">$0EB5–$0F53 Display text and legend data</text>
+<text x="62" y="915">$0D3D–$0EB4 Eleven raster graphic records</text>
+<text x="62" y="946">$0EB5–$0F53 Encoded text, legend and symbols</text>
 <text x="62" y="977">$0F78–$0FE4 Object data    $0FE5–$0FFF ROM fill</text>
 </g></g></svg>
