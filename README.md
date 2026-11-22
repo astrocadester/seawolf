@@ -58,7 +58,7 @@ mame seawolf -window -skip_gameinfo -rompath roms
 
 ## ROM data and graphics organization
 
-The disassembly follows [Checkmate's source style](https://github.com/astrocadester/checkmate/blob/main/src/checkmate.asm): native Intel 8080 symbols and routine comments, named tables, distinct asset boundaries and bitmapped graphics inline. Data remains data, not speculative native opcodes.
+The disassembly follows [Checkmate's source style](https://github.com/astrocadester/checkmate/blob/main/src/checkmate.asm): native Intel 8080 symbols and routine comments, named command tables, original graphics-record boundaries, and individual font glyphs. Data remains data, not speculative native opcodes.
 
 | Original address | Decoded structure |
 | --- | --- |
@@ -72,7 +72,7 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 | `$0BF3–$0BFF` | 13 trailing graphic bytes, individual bitmap rows |
 | `$0C00–$0C38` | 57 pre-alphabet raster/control bytes, individually shown |
 | `$0C39–$0D3C` | 26 labeled 8×10 alphabetic glyphs |
-| `$0D3D–$0EB4` | 11 width/height-prefixed graphics with inline pixel rows |
+| `$0D3D–$0EB4` | Six ship graphics and five smaller graphics records, with their ROM data grouped into original strips |
 | `$0EB5–$0F03` | Display control, packed messages and symbol sequences |
 | `$0F24–$0F53` | Display text/legend and control parameters |
 | `$0F54–$0F77` | Movement/bit-pattern lookup |
@@ -82,7 +82,11 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 
 | `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
 
-Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original rows are grouped by record, but unverified bitmap interpretations are no longer displayed as finished ship artwork; the prominent `$FF` areas require renderer and mask/polarity tracing. These assets are now named `OBJECT_GRAPHIC_*`, not identified as specific ships. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
+The first six graphics are **verified ship assets**: the spawn routine `$064A–$06A3` selects a ship type and copies a descriptor from either `$0F7E` or `$0FAE`; both directional groups point to those same six graphic records. Each ROM graphic record contains a byte width, a strip count, then width × count bytes, but the actual drawing routine continues to the display-memory boundary. ROM record dimensions are therefore distinct from the position-dependent onscreen result. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
+
+![Sea Wolf ROM graphics — shifter data study](images/seawolf-graphics-re.svg)
+
+The two panels for each of the eleven records show unshifted ROM pixels in normal and bit-reversed order. This comparison is grounded in Sea Wolf's MAME hardware I/O: writes to port `$03` load the MB14241, port `$04` sets shift count, port `$03` reads its normal result, and port `$00` reads the bit-reversed result. The drawing code also emits a final zero to flush the shifter and advances by the `$20`-byte screen-memory stride. **This is a verified bit-order illustration, not a fabricated final screenshot.**
 
 The display text is expressed as literal assembly strings with the original `$40` spacing byte (`TEXT_SPACE`), including `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
 
@@ -92,7 +96,7 @@ See [Sea Wolf RE](docs/SEA-WOLF-RE.md) for the record inventory and remaining se
 
 ## The indexed game interpreter
 
-At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. Its native handlers implement game behavior, while command bytes and inline operands describe what happens next.
+At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. The source now records the **command number, actual handler symbol, and inspected effect on each `DW` line**. Command `$01` enters a single `RET` at `$08C7`; `$02`/`$03` store inline bytes, `$07` jumps to an inline script pointer, and other handlers implement text, score, byte transfer, hardware-port reads and timing. See the [handler table](docs/SEA-WOLF-RE.md#native-interpreter-and-interpreted-scripts) for all twelve.
 
 ```mermaid
 flowchart TD
@@ -116,7 +120,10 @@ Original-address, mixed native-assembly/data disassembly with named native routi
 Original ROM reconstruction, splitting, SHA-1 verification and packaging.
 
 `images/seawolf-memory-map.svg`  
-Editable source diagram identifying ROM, interpreter, graphic assets, RAM and display domains.
+Editable address-space memory map.
+
+`images/seawolf-graphics-re.svg`  
+Byte-exact diagrams of eleven original graphics records in normal and reversed bit order.
 
 `roms/original/seawolf.zip`  
 Tracked original reference ROM set, retained unchanged.
@@ -134,4 +141,4 @@ Contemporary Sea Wolf service, graphics and sound documents.
 
 ## Reverse-engineering progress
 
-The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Graphic record lengths are resolved; object identities, individual descriptor field semantics and full interpreter operand contracts still require verification against native execution. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
+The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Six ship types are now tied to the original spawn path and all twelve command handlers have verified entry-point names. Full shifter-position render reproduction, individual descriptor field meanings and native execution verification remain open. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
