@@ -16,6 +16,8 @@
 ; characters, graphic frames and descriptor tables remain ROM data.
 ;*******************************************************************************
 
+TEXT_SPACE EQU $40
+
 PRGPTR EQU $2000
 GTIME EQU $2002
 CREDIT EQU $2005
@@ -2952,36 +2954,30 @@ DISPLAY_TEXT_PREFIX:
         DB $3D,$3E,$3F,$40,$40,$40,$40,$40,$40,$40,$40,$40
         DB $40,$40
 
-; Display messages encoded with $40 spacing ($0EC3).
+; Encoded display text; $40 is the original game's spacing byte.
 DISPLAY_TEXT_MESSAGES:
 
-; GAME OVER (EC3); $40 encodes spacing.
 TEXT_GAME_OVER:
-        DB $47,$41,$4D,$45,$40,$4F,$56,$45,$52
+        DB "GAME",TEXT_SPACE,"OVER"
 
-; HIGH SCORE (ECC); $40 encodes spacing.
 TEXT_HIGH_SCORE:
-        DB $48,$49,$47,$48,$40,$53,$43,$4F,$52,$45
+        DB "HIGH",TEXT_SPACE,"SCORE"
 
-;        (ED6); $40 encodes spacing.
 TEXT_SPACER:
-        DB $40,$40,$40,$40,$40,$40
+        DB TEXT_SPACE,TEXT_SPACE,TEXT_SPACE,TEXT_SPACE,TEXT_SPACE,TEXT_SPACE
 
-; YOUR SCORE (EDC); $40 encodes spacing.
 TEXT_YOUR_SCORE:
-        DB $59,$4F,$55,$52,$40,$53,$43,$4F,$52,$45
+        DB "YOUR",TEXT_SPACE,"SCORE"
 
-; INSERT COIN (EE6); $40 encodes spacing.
 TEXT_INSERT_COIN:
-        DB $49,$4E,$53,$45,$52,$54,$40,$43,$4F,$49,$4E
+        DB "INSERT",TEXT_SPACE,"COIN"
 
-; PUSH BUTTON (EF1); the following S at $0EFC also begins SEA WOLF. $40 encodes spacing.
+; The S at $0EFC completes BUTTONS and begins SEA WOLF.
 TEXT_PUSH_BUTTON:
-        DB $50,$55,$53,$48,$40,$42,$55,$54,$54,$4F,$4E
+        DB "PUSH",TEXT_SPACE,"BUTTON"
 
-; SEA WOLF (EFC); $40 encodes spacing.
 TEXT_SEA_WOLF:
-        DB $53,$45,$41,$40,$57,$4F,$4C,$46
+        DB "SEA",TEXT_SPACE,"WOLF"
 
 ; Repeating $3A–$3C display character indexes ($0F04).
 DISPLAY_SYMBOL_PATTERN:
@@ -2991,10 +2987,9 @@ DISPLAY_SYMBOL_PATTERN:
 
 ; DISPLAY_LEGEND_TABLE ($0F24) - Embedded display words and game-status layout data
 ; -----------------------------------------------------------------------------
-; Bonus, time, score, extended legends ($0F24).
+; Packed display legend followed by original control byte $16.
 DISPLAY_LEGEND_TABLE:
-        DB $42,$4F,$4E,$55,$53,$54,$49,$4D,$45,$2D,$53,$43
-        DB $4F,$52,$45,$45,$58,$54,$45,$4E,$44,$45,$44,$16
+        DB "BONUSTIME-SCOREEXTENDED",$16
 
 ; Time and display control values ($0F3C).
 DISPLAY_LEGEND_LAYOUT:
