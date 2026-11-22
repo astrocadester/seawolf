@@ -2808,11 +2808,13 @@ FONT_LETTER_Z:
         DB $7E  ; .######.
         DB $7E  ; .######.
 
-; Width/height graphic records. These bytes are not standalone rendered sprite pictures.
+; Six ship graphic records selected by $064A-$06A3, followed by smaller graphics.
+; Native code feeds these bytes through the MB14241 hardware shifter.
+; Screen writes advance by the $20-byte video RAM column stride.
 OBJECT_GRAPHICS:
 
-; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_0:
+; Five source bytes per strip, twelve strips; hardware shift sets displayed alignment.
+SHIP_GRAPHIC_0:
         DB $05,$0C  ; width in bytes, height in rows
         DB $00,$00,$08,$00,$00
         DB $00,$00,$08,$00,$00
@@ -2826,8 +2828,8 @@ OBJECT_GRAPHIC_0:
         DB $FF,$FF,$FF,$FF,$3F
         DB $FE,$FF,$FF,$FF,$1F
         DB $FE,$FF,$FF,$FF,$0F
-; Four-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_1:
+; Four source bytes per strip, twelve strips; hardware shift sets displayed alignment.
+SHIP_GRAPHIC_1:
         DB $04,$0C  ; width in bytes, height in rows
         DB $00,$00,$03,$00
         DB $00,$36,$03,$00
@@ -2842,7 +2844,7 @@ OBJECT_GRAPHIC_1:
         DB $FC,$FF,$FF,$0F
         DB $F8,$FF,$FF,$07
 ; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_2:
+SHIP_GRAPHIC_2:
         DB $05,$0C  ; width in bytes, height in rows
         DB $00,$00,$40,$00,$00
         DB $00,$00,$F0,$00,$00
@@ -2856,8 +2858,8 @@ OBJECT_GRAPHIC_2:
         DB $F8,$FF,$FF,$FF,$07
         DB $F8,$FF,$FF,$FF,$03
         DB $F8,$FF,$FF,$FF,$03
-; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_3:
+; Four source bytes per strip, eleven strips; hardware shift sets displayed alignment.
+SHIP_GRAPHIC_3:
         DB $04,$0B  ; width in bytes, height in rows
         DB $40,$00,$00,$02
         DB $40,$80,$00,$02
@@ -2871,7 +2873,7 @@ OBJECT_GRAPHIC_3:
         DB $F0,$FF,$FF,$0F
         DB $F0,$FF,$FF,$0F
 ; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_4:
+SHIP_GRAPHIC_4:
         DB $04,$0B  ; width in bytes, height in rows
         DB $80,$00,$00,$00
         DB $00,$00,$00,$01
@@ -2884,8 +2886,8 @@ OBJECT_GRAPHIC_4:
         DB $F0,$FF,$FF,$1F
         DB $F0,$FF,$FF,$0F
         DB $E0,$FF,$FF,$0F
-; Two-byte rows, six lines. Raw graphics data; rendering polarity and mask semantics unverified.
-OBJECT_GRAPHIC_5:
+; Two source bytes per strip, six strips; hardware shift sets displayed alignment.
+SHIP_GRAPHIC_5:
         DB $02,$06  ; width in bytes, height in rows
         DB $00,$03
         DB $10,$07
