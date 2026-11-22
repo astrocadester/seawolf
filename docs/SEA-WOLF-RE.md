@@ -66,7 +66,7 @@ A record consists of **one byte width (bytes per scanline), one byte height (sca
 | 9 | `$0E98–$0EA2` | 1 × 9 | 9 bytes |
 | 10 | `$0EA3–$0EB4` | 1 × 16 | 16 bytes |
 
-The source now renders each record as a two-byte header followed by one labeled `DB` line per raster row, with pixel bits alongside the data. Row/record byte boundaries are established. **Precise onscreen identities, orientation and collision purposes still require target-side confirmation.**
+The source retains each record's two-byte header and grouped raster rows. Misleading ASCII ship pictures were removed: broad runs of `$FF` must be interpreted through the original renderer and mask/polarity behavior before reconstructing visual shapes. Row/record byte boundaries are established, but object identity is not. **Precise onscreen identities, orientation and collision purposes still require target-side confirmation.**
 
 ### Encoded text
 
@@ -76,9 +76,9 @@ The following `$0F04–$0F23` holds a repeated `$3A–$3C` display-symbol sequen
 
 ### Object record table and EOF fill
 
-`$0F78–$0FD7` holds twelve eight-byte descriptor records. Their first two bytes encode a **high-byte-first graphic pointer**, e.g. bytes `0D 3D` refer to `$0D3D`. Normal 8080 `DW` would reverse this byte order and is therefore inappropriate for those fields. The existing `$0F7E` reference points into record zero rather than to the table's beginning; this matters when naming field offsets. Remaining descriptor field meanings and object identities need caller analysis.
+`$0F7E–$0FDD` holds twelve eight-byte descriptor records, preceded by a six-byte lookup tail at `$0F78–$0F7D`. Their first two bytes encode a **high-byte-first graphic pointer**, e.g. bytes `0D 3D` at `$0F7E` refer to `$0D3D`. Normal 8080 `DW` would reverse this byte order and is therefore inappropriate for those fields. The existing `$0F7E` reference points to the first record's graphic pointer. The preceding six bytes are not part of a descriptor. The previous eight-byte grouping beginning at `$0F78` was incorrect and has been replaced. Remaining descriptor field meanings and object identities need caller analysis.
 
-`$0FD8–$0FE4` contains thirteen trailing object-control bytes.
+`$0FDE–$0FE4` contains seven trailing object-control bytes.
 
 `$0FE5–$0FFF` is exactly 27 consecutive `$FF` bytes. The earlier linear disassembly expressed each as `RST $38` because Intel 8080 opcode `$FF` is `RST 7`; execution would jump to `$0038`. There is no verified code path into this region, so it is documented as ROM fill with 27 explicit `DB $FF` bytes, not active reset instructions. Its original programming rationale is unverified.
 
