@@ -11,24 +11,24 @@ Version: v20261121-0001
 
 ## Native interpreter and interpreted scripts
 
-The interpreter at `$045E` reads the command pointed to by the little-endian script cursor in RAM `$2000`. A zero command enters frame-control processing. A nonzero command indexes the table at `$09E8`, where 12 little-endian 16-bit values identify native handlers:
+The native dispatcher at `$045E` reads the command pointed to by RAM `$2000`. Command zero enters the frame-service path; commands `$01–$0C` select twelve little-endian native handler addresses at `$09E8`.
 
-| Command | Handler address | Source interpretation |
-| --- | --- | --- |
-| $01 | $08C7 | Native input/control service |
-| $02 | $0B7C | Store following byte in RAM $2011 |
-| $03 | $0B72 | Store following byte in RAM $2010 |
-| $04 | $08A2 | Initialize game state |
-| $05 | $0B22 | Native drawing/text service |
-| $06 | $0AED | Native drawing/text service |
-| $07 | $0B86 | Read inline 16-bit target and replace script pointer |
-| $08 | $0AE1 | Native drawing/text service |
-| $09 | $0A9F | Native drawing/text service |
-| $0A | $0ABC | Native drawing/text service |
-| $0B | $0A53 | Native graphics service |
-| $0C | $086D | Native game service |
+| Command | Address | Handler symbol | Verified operation |
+| --- | --- | --- | --- |
+| `$01` | `$08C7` | `CMD_RETURN` | Single `RET`: no operation |
+| `$02` | `$0B7C` | `SCRIPT_STORE_STATE_2011` | Store next inline byte at RAM `$2011` |
+| `$03` | `$0B72` | `SCRIPT_STORE_STATE_2010` | Store next inline byte at RAM `$2010` |
+| `$04` | `$08A2` | `INITIALIZE_GAME_STATE` | Reset state and draw the introductory screen |
+| `$05` | `$0B22` | `CMD_RENDER_TEXT` | Read inline source/address/count and render text |
+| `$06` | `$0AED` | `CMD_READ_HARDWARE_PORT` | Assemble `IN port; RET` in RAM and dispatch through it |
+| `$07` | `$0B86` | `SCRIPT_JUMP_ABSOLUTE` | Replace script cursor with inline 16-bit target |
+| `$08` | `$0AE1` | `CMD_COPY_POINTED_BYTE` | Write the byte at the supplied source pointer to an inline destination |
+| `$09` | `$0A9F` | `CMD_COPY_INLINE_BYTES_REVERSED` | Write counted inline bytes backward from destination |
+| `$0A` | `$0ABC` | `CMD_SELECT_AND_RENDER_TEXT` | Choose one of two message addresses using a source value |
+| `$0B` | `$0A53` | `CMD_RENDER_SCORE` | Convert score digits and render four characters |
+| `$0C` | `$086D` | `CMD_ADVANCE_AND_SET_TIMER_PHASE` | Advance script and update RAM `$2029` from timer `$2003` |
 
-The addresses are read directly from ROM bytes `$09E8–$09FF`. Handler purpose descriptions beyond the explicitly inspected `$0B72`, `$0B7C`, and `$0B86` entry points should be refined by full register-flow analysis before using them as authoritative handler names.
+Each name now appears both as an actual assembly label at the native entry address and as the `DW` operand. The original address and command number are preserved in the table. Names describe inspected instructions; they are not claimed DNA-era symbols.
 
 The script/data region begins at `$0929`. This is not assembly code; inline values may be command bytes, lengths, coordinates, or addresses consumed by a specific handler. A disassembler must not freely decode this region into 8080 instructions.
 
@@ -48,9 +48,9 @@ The script/data region begins at `$0929`. This is not assembly code; inline valu
 
 `$0C39–$0D3C`: 26 uppercase glyphs, 10 rows each.
 
-### Eleven width/height graphic records
+### Six ship graphics and five smaller graphic records
 
-A record consists of **one byte width (bytes per scanline), one byte height (scanlines), then width × height raster bytes**. The end of each record coincides exactly with the next header. Graphics addresses for the first six occur in the twelve ROM object descriptors.
+A record consists of **one byte width (bytes per scanline), one byte height (scanlines), then width × height raster bytes**. The end of each record coincides exactly with the next header. The six ship graphics are identified through the native spawn path at `$064A–$06A3`: it reads the ship-type selector at `$0FDE`, uses `$0F7E` or `$0FAE` as a directional descriptor base, copies an eight-byte record into RAM, and supplies its graphics pointer to the renderer. Both sets of six records point to the same six ROM graphics, with direction/movement parameters differing between groups.
 
 | Record | Address range | Header | Raster payload |
 | --- | --- | --- | --- |
@@ -66,7 +66,15 @@ A record consists of **one byte width (bytes per scanline), one byte height (sca
 | 9 | `$0E98–$0EA2` | 1 × 9 | 9 bytes |
 | 10 | `$0EA3–$0EB4` | 1 × 16 | 16 bytes |
 
-The source retains each record's two-byte header and grouped raster rows and now calls the first six `OBJECT_GRAPHIC_*` rather than assuming that they are directly drawable ship sprites. Misleading ASCII ship pictures were removed: broad runs of `$FF` must be interpreted through the original renderer and mask/polarity behavior before reconstructing visual shapes. Row/record byte boundaries are established, but object identity is not. **Precise onscreen identities, orientation and collision purposes still require target-side confirmation.**
+The first six are now labeled `SHIP_GRAPHIC_0` through `SHIP_GRAPHIC_5`, based on the ROM-to-RAM spawn references. Their raw `DB` strips remain byte-exact. The initial inline ASCII art presented bits as though the ROM bytes were final horizontal pixels; that omitted the actual bit order and shifter processing.
+
+The renderer at `$0165` derives a sub-byte shift and sets it with `OUT ($04),A`. The normal drawing path at `$0192` writes each byte with `OUT ($03),A`, reads `IN ($03)`, and writes the shifted result to screen RAM. The alternate path at `$01B8` instead reads `IN ($00)` and walks the destination address backward. Both feed a final zero byte through the shifter before proceeding to the next `$20`-byte video-RAM column. The normal path's loop termination is based on display-memory boundaries rather than an explicit decrement of the header's second byte. Thus the header-derived record height is an exact **ROM record length**, but does not by itself prove that the screen renderer emits only that many strips.
+
+MAME's Sea Wolf `io_map` confirms that port `$03` reads the normal MB14241 result and port `$00` reads that result with bits reversed. Its MB14241 device computes `shift_count = ~value & 7` and combines successive writes before selecting the eight-bit output. These precise I/O semantics explain why bit order, shift amount and screen placement must be handled before claiming a final displayed ship silhouette.
+
+![Sea Wolf graphic record study](../images/seawolf-graphics-re.svg)
+
+The new SVG contains **all eleven original graphic records** rendered from their literal ROM bytes in the two MAME-supported bit orientations at shift count zero. These bit-exact previews prove record grouping and bit order; they are explicitly not a substitute for MAME's composited, position-dependent screen output. The RE remains active for full position/shift reproduction and screenshot matching.
 
 ### Encoded text
 
@@ -93,8 +101,8 @@ These are **source-level byte checks**, not a zmac-assembled ROM comparison. The
 | ID | Status | Verification criterion |
 | --- | --- | --- |
 | SW-RE-001 | Partial | Replaced all 111 remaining address-only branch labels with context names; labels and branch roles remain reviewable against execution tracing |
-| SW-RE-002 | Partial | Fully decode command $01–$0C operand formats and each handler's register/stack contract, including control command $00 |
-| SW-RE-003 | Partial | Eleven graphic record widths/heights and per-row byte boundaries resolved; on-screen identities and caller usage remain to verify |
+| SW-RE-002 | Partial | All 12 handler names now mapped to native entry labels with inspected operations; finish exact operand widths and stack/register contracts |
+| SW-RE-003 | Partial | Six ship graphics tied to the native spawn routine, eleven ROM graphics previewed in normal/reversed bit order; reproduce sub-byte shift and full screen placement in MAME |
 | SW-RE-004 | Partial | All 36 glyphs plus thirteen trailer and 57 pre-alphabet bytes shown inline; verify interpretation of non-glyph data |
 | SW-RE-005 | Partial | Twelve eight-byte descriptor records split and graphic pointer byte-order verified; decode remaining fields against callers |
 | SW-RE-006 | Open | Build with `./build.sh` using bundled zmac v1.3; confirm the 4096-byte image and all four SHA-1 hashes |
@@ -103,7 +111,7 @@ These are **source-level byte checks**, not a zmac-assembled ROM comparison. The
 
 ## Verification record
 
-**Performed:** Direct Checkmate source-style comparison, source-label naming pass (no remaining `Lxxxx` labels), 36 inline 8×10 font glyphs, eleven inline graphic records, twelve object descriptors, named scripts/lookup boundaries, twelve `DW` handler vectors and 27 explicit `$FF` fill bytes. Source-level checks compared every rewritten data byte and found no mismatch in the verified regions; static named CALL/JP checks found no missing label references. Memory-map SVG and build destinations were revised.
+**Performed:** MAME Sea Wolf I/O and MB14241 source inspection, native handler control-flow inspection, identification of six original ship graphics from the spawn path, and byte-exact ROM previews for both shifter bit orientations.  Direct Checkmate source-style comparison, source-label naming pass (no remaining `Lxxxx` labels), 36 inline 8×10 font glyphs, eleven inline graphic records, twelve object descriptors, named scripts/lookup boundaries, twelve `DW` handler vectors and 27 explicit `$FF` fill bytes. Source-level checks compared every rewritten data byte and found no mismatch in the verified regions; static named CALL/JP checks found no missing label references. Memory-map SVG and build destinations were revised.
 
 **Not performed:** Native zmac invocation, checksum verification of newly assembled output, MAME execution, physical cabinet execution. The updated build writes to `build/` and creates ignored `roms/seawolf.zip`.
 
