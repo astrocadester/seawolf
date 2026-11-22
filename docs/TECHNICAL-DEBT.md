@@ -35,3 +35,9 @@ Resolved labeling defect: `$09CA–$09E7` contains 15 native two-byte pointer va
 ## Graphics research gate — 2026-11-21
 
 The first six ROM records are proven ship assets from the $064A–$06A3 spawn path and two descriptor banks. Source code and MAME confirm port $03 normal output versus port $00 reversed output, selected by object direction bit $10. Byte-exact zero-shift previews were added; full per-position shifted compositing and onscreen screenshot comparison remain open. The MAME runtime and four-ROM SHA-1 tests remain outstanding.
+
+## Script interpreter audit — 2026-11-21
+
+- Prior command-table documentation numbered the reserved first pointer as command `$01`; corrected to reserved `$00` and executable commands `$01–$0B`. This was a source-analysis error, not an original ROM change.
+- All three `$0929–$09B8` interpreted streams now contain named typed commands. Source-derived 144 bytes were compared independently with the original `main` ROM source and matched exactly; original native assembler and runtime checks remain outstanding.
+- Generic executable `OBJECT_*` labels have been reviewed; the remaining `OBJECT_*` names describe ROM graphics/data records and tables. `RENDER_HIT_EFFECT` at `$0796` is supported by the sound/timer writes and three calls to `RENDER_GAME_TEXT`.
