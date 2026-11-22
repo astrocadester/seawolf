@@ -58,23 +58,34 @@ mame seawolf -window -skip_gameinfo -rompath roms
 
 ## ROM data and graphics organization
 
-The original ROM contains both native Intel 8080 routines and data consumed by those routines. The assembly now uses the Checkmate-style source header, native routine and branch names, inline raster rows for each numeric and uppercase character glyph, and named boundaries for interpreter and graphics data. `DB` remains the correct assembly representation for bytecode operands, glyph raster rows, pixel patterns and mixed descriptor records; decoding their purpose does not turn them into machine instructions.
+The disassembly follows [Checkmate's source style](https://github.com/astrocadester/checkmate/blob/main/src/checkmate.asm): native Intel 8080 symbols and routine comments, named tables, distinct asset boundaries and bitmapped graphics inline. Data remains data, not speculative native opcodes.
 
-| ROM range | Interpretation | Evidence |
-| --- | --- | --- |
-| `$0429–$0439` | Startup constants/data | Byte-exact boundary before startup entry at `$043A` |
-| `$0929–$09B8` | Interpreted game commands with inline operands | Interpreter at `$045E` reads command bytes through pointer `$2000` |
-| `$09B9–$09E7` | Lookup and dispatch-related byte data | Adjacent to native handler-address table |
-| `$09E8–$09FF` | Twelve 16-bit handler addresses | `$045E` indexes the table after fetching a nonzero command |
-| `$0B8F–$0BFF` | Numeric glyph patterns and adjacent graphic bytes | Character rendering reads `$0B8F` |
-| `$0C00–$0D3F` | Graphic header and character bitmap patterns | Byte patterns comprise raster rows, not native instructions |
-| `$0D40–$0EB7` | Object/explosion frames and display data | Sprite-like pixel masks and repeated packed rows |
-| `$0EB8–$0F53` | Encoded legends and control information | Embedded game text including GAME OVER, HIGH SCORE and INSERT COIN |
-| `$0F54–$0F77` | Byte-order/shift lookup data | Indexed values used in object/screen drawing |
-| `$0F78–$0FE4` | Object and graphic descriptors | ROM table referenced from `$0F7E` |
-| `$0FE5–$0FFF` | `$FF` fill bytes | Erased-ROM-style padding |
+| Original address | Decoded structure |
+| --- | --- |
+| `$0929–$0962` | Initial interpreted command stream |
+| `$0963–$09A5` | Secondary command stream |
+| `$09A6–$09B8` | Auxiliary script/data |
+| `$09B9–$09E7` | Input/lookup bytes with identified reference points |
+| `$09E8–$09FF` | 12 little-endian native handler vectors (`DW`) |
+| `$0B8F–$0BF2` | Ten labeled 8×10 digit glyphs |
+| `$0BF3–$0BFF` | 13 trailing graphic bytes, individual bitmap rows |
+| `$0C00–$0C38` | 57 pre-alphabet raster/control bytes, individually shown |
+| `$0C39–$0D3C` | 26 labeled 8×10 alphabetic glyphs |
+| `$0D3D–$0EB4` | 11 width/height-prefixed graphics with inline pixel rows |
+| `$0EB5–$0F03` | Display control, packed messages and symbol sequences |
+| `$0F24–$0F53` | Display text/legend and control parameters |
+| `$0F54–$0F77` | Movement/bit-pattern lookup |
+| `$0F78–$0FD7` | Twelve 8-byte object records, each with a graphic pointer |
+| `$0FD8–$0FE4` | Thirteen object-control bytes |
+| `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
 
-All 36 numeric and uppercase font glyphs are individually labeled, with their ten raster bytes and pixel patterns shown inline. Use [the RE record](docs/SEA-WOLF-RE.md) for evidence levels, byte-boundary distinctions, and remaining verification work.
+Each graphic record contains a width in **bytes per raster row**, a height in rows, then exactly width × height bytes. The original descriptor pointers anchor the first six entries. Remaining records follow the same header and exact-length structure. The 12 object records store graphics pointers high-byte first, so those fields must not be converted blindly to little-endian `DW`.
+
+The display text includes `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
+
+The `$FF` tail is **data**, not 27 active `RST $38` instructions. `$FF` happens to decode as `RST 7` (vector `$0038`) if executed, but no execution edge to this fill region has been established.
+
+See [Sea Wolf RE](docs/SEA-WOLF-RE.md) for the record inventory and remaining semantic investigations.
 
 ## The indexed game interpreter
 
@@ -120,4 +131,4 @@ Contemporary Sea Wolf service, graphics and sound documents.
 
 ## Reverse-engineering progress
 
-The source now replaces all original address-only `Lxxxx` labels with contextual labels and uses Checkmate's compact header, spacing and inline-graphics conventions. Label names are RE descriptions, not claimed original DNA identifiers. Interpreted command operand formats and non-font graphic records still require detailed functional verification. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
+The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Graphic record lengths are resolved; object identities, individual descriptor field semantics and full interpreter operand contracts still require verification against native execution. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
