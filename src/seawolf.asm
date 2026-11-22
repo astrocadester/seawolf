@@ -1674,6 +1674,9 @@ SCORE_FILL_BYTES_LOOP:
         LD DE,$3E25
         LD A,$04
         JP RENDER_GAME_TEXT
+
+; Command $0C: advance the script pointer and derive timer phase.
+CMD_ADVANCE_AND_SET_TIMER_PHASE:
         EX DE,HL
         LD ($2000),HL
         LD A,($2003)
@@ -1732,6 +1735,9 @@ POLL_PLAYER_INPUT:
         LD DE,$09DA
         CP B
         CALL Z,HANDLE_INPUT_CHANGE
+
+; Command $01: no-op/return. Also referenced by input-service vectors.
+CMD_RETURN:
         RET
         RET Z
         LD A,$20
@@ -1856,18 +1862,19 @@ GAME_SERVICE_VECTOR_SUBTABLE:
 ; Indexed 16-bit native handler addresses, little endian.
 ; Twelve 16-bit native handler vectors indexed by nonzero commands $01–$0C.
 GAME_COMMAND_HANDLER_TABLE:
-        DW $08C7  ;         DW $08C7  ;  — native handler; behavior pending register tracing
-        DW $0B7C  ; $02 — store next inline byte at RAM $2011
-        DW $0B72  ; $03 — store next inline byte at RAM $2010
-        DW $08A2  ; $04 — initialize game state
-        DW $0B22  ; $05 — native handler; operand contract pending
-        DW $0AED  ; $06 — native handler; operand contract pending
-        DW $0B86  ; $07 — replace script pointer using inline 16-bit target
-        DW $0AE1  ; $08 — native handler; operand contract pending
-        DW $0A9F  ; $09 — native handler; operand contract pending
-        DW $0ABC  ; $0A — native handler; operand contract pending
-        DW $0A53  ; $0B — native handler; operand contract pending
-        DW $086D  ; $0C — native handler; operand contract pending
+        DW CMD_RETURN                        ; $01  RET; no operation
+        DW SCRIPT_STORE_STATE_2011           ; $02  Store inline byte at RAM $2011
+        DW SCRIPT_STORE_STATE_2010           ; $03  Store inline byte at RAM $2010
+        DW INITIALIZE_GAME_STATE             ; $04  Reset and draw start screen
+        DW CMD_RENDER_TEXT                   ; $05  Render inline text specification
+        DW CMD_READ_HARDWARE_PORT            ; $06  Execute generated IN port stub
+        DW SCRIPT_JUMP_ABSOLUTE              ; $07  Jump to inline script address
+        DW CMD_COPY_POINTED_BYTE             ; $08  Copy pointed byte to RAM
+        DW CMD_COPY_INLINE_BYTES_REVERSED    ; $09  Copy inline bytes in reverse order
+        DW CMD_SELECT_AND_RENDER_TEXT        ; $0A  Select and render a message
+        DW CMD_RENDER_SCORE                  ; $0B  Format and render score
+        DW CMD_ADVANCE_AND_SET_TIMER_PHASE   ; $0C  Update timer-phase state
+
 ; Set up bit-shift operands.
 BIT_SHIFT_SETUP:
         LD A,E
@@ -1953,6 +1960,9 @@ GRAPHIC_CLEAR_BYTE_LOOP:
         DEC B
         JP NZ,GRAPHIC_CLEAR_ROW_BEGIN
         RET
+
+; Command $0B: convert a BCD field and render a four-character score.
+CMD_RENDER_SCORE:
         EX DE,HL
         LD C,(HL)
         INC HL
@@ -2015,6 +2025,9 @@ SCORE_STORE_SECOND_DIGIT:
         LD (DE),A
         INC DE
         RET
+
+; Command $09: copy a counted inline byte sequence to a destination in reverse order.
+CMD_COPY_INLINE_BYTES_REVERSED:
         EX DE,HL
         LD B,(HL)
         INC HL
@@ -2041,6 +2054,9 @@ TEXT_COPY_BUFFER_BYTE:
         JP NZ,TEXT_COPY_BUFFER_BYTE
         LD ($2000),HL
         RET
+
+; Command $0A: select and render one of two encoded message addresses.
+CMD_SELECT_AND_RENDER_TEXT:
         EX DE,HL
         CALL SCRIPT_READ_INLINE_ADDRESS
         LD A,(DE)
@@ -2069,6 +2085,9 @@ SCRIPT_READ_INLINE_ADDRESS:
         LD D,(HL)
         INC HL
         RET
+
+; Command $08: copy the byte at DE to an inline 16-bit RAM destination.
+CMD_COPY_POINTED_BYTE:
         LD A,(DE)
         INC DE
         EX DE,HL
@@ -2079,6 +2098,9 @@ SCRIPT_READ_INLINE_ADDRESS:
         LD ($2000),HL
         LD (BC),A
         RET
+
+; Command $06: construct and execute an IN port / RET stub in RAM.
+CMD_READ_HARDWARE_PORT:
         EX DE,HL
         LD B,(HL)
         INC HL
@@ -2130,6 +2152,9 @@ INPUT_TOGGLE_SELECTED_BIT:
         LD H,(HL)
         LD L,C
         JP (HL)
+
+; Command $05: read inline text source, screen address and length, then render.
+CMD_RENDER_TEXT:
         EX DE,HL
         LD A,(HL)
         INC HL
