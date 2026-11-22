@@ -2772,116 +2772,109 @@ FONT_LETTER_Z:
         DB $7E  ; .######.
         DB $7E  ; .######.
 
-; Graphic records selected by the original object descriptor pointers.
+; Width/height graphic records. These bytes are not standalone rendered sprite pictures.
 OBJECT_GRAPHICS:
 
-; 5 bytes per raster row by 12 rows, stored MSB-first per byte.
+; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_0:
         DB $05,$0C  ; width in bytes, height in rows
-        DB $00,$00,$08,$00,$00  ; ........ ........ ....#... ........ ........
-        DB $00,$00,$08,$00,$00  ; ........ ........ ....#... ........ ........
-        DB $00,$60,$0E,$00,$00  ; ........ .##..... ....###. ........ ........
-        DB $00,$E0,$CE,$3F,$00  ; ........ ###..... ##..###. ..###### ........
-        DB $00,$E0,$DE,$03,$00  ; ........ ###..... ##.####. ......## ........
-        DB $F8,$F7,$DF,$F7,$0F  ; #####... ####.### ##.##### ####.### ....####
-        DB $80,$F7,$DF,$F7,$00  ; #....... ####.### ##.##### ####.### ........
-        DB $FF,$FF,$FF,$FF,$FF  ; ######## ######## ######## ######## ########
-        DB $FF,$FF,$FF,$FF,$7F  ; ######## ######## ######## ######## .#######
-        DB $FF,$FF,$FF,$FF,$3F  ; ######## ######## ######## ######## ..######
-        DB $FE,$FF,$FF,$FF,$1F  ; #######. ######## ######## ######## ...#####
-        DB $FE,$FF,$FF,$FF,$0F  ; #######. ######## ######## ######## ....####
-
-; 4 bytes per raster row by 12 rows, stored MSB-first per byte.
+        DB $00,$00,$08,$00,$00
+        DB $00,$00,$08,$00,$00
+        DB $00,$60,$0E,$00,$00
+        DB $00,$E0,$CE,$3F,$00
+        DB $00,$E0,$DE,$03,$00
+        DB $F8,$F7,$DF,$F7,$0F
+        DB $80,$F7,$DF,$F7,$00
+        DB $FF,$FF,$FF,$FF,$FF
+        DB $FF,$FF,$FF,$FF,$7F
+        DB $FF,$FF,$FF,$FF,$3F
+        DB $FE,$FF,$FF,$FF,$1F
+        DB $FE,$FF,$FF,$FF,$0F
+; Four-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_1:
         DB $04,$0C  ; width in bytes, height in rows
-        DB $00,$00,$03,$00  ; ........ ........ ......## ........
-        DB $00,$36,$03,$00  ; ........ ..##.##. ......## ........
-        DB $00,$36,$03,$00  ; ........ ..##.##. ......## ........
-        DB $02,$B6,$03,$00  ; ......#. #.##.##. ......## ........
-        DB $87,$FF,$F3,$07  ; #....### ######## ####..## .....###
-        DB $E2,$FF,$F7,$00  ; ###...#. ######## ####.### ........
-        DB $FF,$FF,$FF,$FF  ; ######## ######## ######## ########
-        DB $FF,$FF,$FF,$7F  ; ######## ######## ######## .#######
-        DB $FF,$FF,$FF,$3F  ; ######## ######## ######## ..######
-        DB $FC,$FF,$FF,$1F  ; ######.. ######## ######## ...#####
-        DB $FC,$FF,$FF,$0F  ; ######.. ######## ######## ....####
-        DB $F8,$FF,$FF,$07  ; #####... ######## ######## .....###
-
-; 5 bytes per raster row by 12 rows, stored MSB-first per byte.
+        DB $00,$00,$03,$00
+        DB $00,$36,$03,$00
+        DB $00,$36,$03,$00
+        DB $02,$B6,$03,$00
+        DB $87,$FF,$F3,$07
+        DB $E2,$FF,$F7,$00
+        DB $FF,$FF,$FF,$FF
+        DB $FF,$FF,$FF,$7F
+        DB $FF,$FF,$FF,$3F
+        DB $FC,$FF,$FF,$1F
+        DB $FC,$FF,$FF,$0F
+        DB $F8,$FF,$FF,$07
+; Five-byte rows, twelve lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_2:
         DB $05,$0C  ; width in bytes, height in rows
-        DB $00,$00,$40,$00,$00  ; ........ ........ .#...... ........ ........
-        DB $00,$00,$F0,$00,$00  ; ........ ........ ####.... ........ ........
-        DB $00,$00,$F0,$00,$00  ; ........ ........ ####.... ........ ........
-        DB $00,$80,$F0,$1E,$00  ; ........ #....... ####.... ...####. ........
-        DB $00,$00,$FB,$06,$00  ; ........ ........ #####.## .....##. ........
-        DB $FF,$FF,$FF,$FF,$FF  ; ######## ######## ######## ######## ########
-        DB $FC,$FF,$FF,$FF,$3F  ; ######.. ######## ######## ######## ..######
-        DB $FC,$FF,$FF,$FF,$1F  ; ######.. ######## ######## ######## ...#####
-        DB $FC,$FF,$FF,$FF,$0F  ; ######.. ######## ######## ######## ....####
-        DB $F8,$FF,$FF,$FF,$07  ; #####... ######## ######## ######## .....###
-        DB $F8,$FF,$FF,$FF,$03  ; #####... ######## ######## ######## ......##
-        DB $F8,$FF,$FF,$FF,$03  ; #####... ######## ######## ######## ......##
-
-; 4 bytes per raster row by 11 rows, stored MSB-first per byte.
+        DB $00,$00,$40,$00,$00
+        DB $00,$00,$F0,$00,$00
+        DB $00,$00,$F0,$00,$00
+        DB $00,$80,$F0,$1E,$00
+        DB $00,$00,$FB,$06,$00
+        DB $FF,$FF,$FF,$FF,$FF
+        DB $FC,$FF,$FF,$FF,$3F
+        DB $FC,$FF,$FF,$FF,$1F
+        DB $FC,$FF,$FF,$FF,$0F
+        DB $F8,$FF,$FF,$FF,$07
+        DB $F8,$FF,$FF,$FF,$03
+        DB $F8,$FF,$FF,$FF,$03
+; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_3:
         DB $04,$0B  ; width in bytes, height in rows
-        DB $40,$00,$00,$02  ; .#...... ........ ........ ......#.
-        DB $40,$80,$00,$02  ; .#...... #....... ........ ......#.
-        DB $40,$00,$07,$02  ; .#...... ........ .....### ......#.
-        DB $40,$00,$07,$02  ; .#...... ........ .....### ......#.
-        DB $40,$F0,$07,$02  ; .#...... ####.... .....### ......#.
-        DB $FC,$F0,$07,$F8  ; ######.. ####.... .....### #####...
-        DB $FC,$FF,$FF,$7F  ; ######.. ######## ######## .#######
-        DB $FC,$FF,$FF,$3F  ; ######.. ######## ######## ..######
-        DB $F8,$FF,$FF,$1F  ; #####... ######## ######## ...#####
-        DB $F0,$FF,$FF,$0F  ; ####.... ######## ######## ....####
-        DB $F0,$FF,$FF,$0F  ; ####.... ######## ######## ....####
-
-; 4 bytes per raster row by 11 rows, stored MSB-first per byte.
+        DB $40,$00,$00,$02
+        DB $40,$80,$00,$02
+        DB $40,$00,$07,$02
+        DB $40,$00,$07,$02
+        DB $40,$F0,$07,$02
+        DB $FC,$F0,$07,$F8
+        DB $FC,$FF,$FF,$7F
+        DB $FC,$FF,$FF,$3F
+        DB $F8,$FF,$FF,$1F
+        DB $F0,$FF,$FF,$0F
+        DB $F0,$FF,$FF,$0F
+; Four-byte rows, eleven lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_4:
         DB $04,$0B  ; width in bytes, height in rows
-        DB $80,$00,$00,$00  ; #....... ........ ........ ........
-        DB $00,$00,$00,$01  ; ........ ........ ........ .......#
-        DB $A0,$01,$00,$01  ; #.#..... .......# ........ .......#
-        DB $A0,$01,$00,$01  ; #.#..... .......# ........ .......#
-        DB $F0,$01,$00,$01  ; ####.... .......# ........ .......#
-        DB $F8,$01,$00,$F9  ; #####... .......# ........ #####..#
-        DB $F8,$FF,$FF,$7F  ; #####... ######## ######## .#######
-        DB $F0,$FF,$FF,$3F  ; ####.... ######## ######## ..######
-        DB $F0,$FF,$FF,$1F  ; ####.... ######## ######## ...#####
-        DB $F0,$FF,$FF,$0F  ; ####.... ######## ######## ....####
-        DB $E0,$FF,$FF,$0F  ; ###..... ######## ######## ....####
-
-; 2 bytes per raster row by 6 rows, stored MSB-first per byte.
+        DB $80,$00,$00,$00
+        DB $00,$00,$00,$01
+        DB $A0,$01,$00,$01
+        DB $A0,$01,$00,$01
+        DB $F0,$01,$00,$01
+        DB $F8,$01,$00,$F9
+        DB $F8,$FF,$FF,$7F
+        DB $F0,$FF,$FF,$3F
+        DB $F0,$FF,$FF,$1F
+        DB $F0,$FF,$FF,$0F
+        DB $E0,$FF,$FF,$0F
+; Two-byte rows, six lines. Raw graphics data; rendering polarity and mask semantics unverified.
 SHIP_GRAPHIC_5:
         DB $02,$06  ; width in bytes, height in rows
-        DB $00,$03  ; ........ ......##
-        DB $10,$07  ; ...#.... .....###
-        DB $E0,$FF  ; ###..... ########
-        DB $FF,$7F  ; ######## .#######
-        DB $FF,$3F  ; ######## ..######
-        DB $FF,$1F  ; ######## ...#####
-
+        DB $00,$03
+        DB $10,$07
+        DB $E0,$FF
+        DB $FF,$7F
+        DB $FF,$3F
+        DB $FF,$1F
 ; 2 bytes per raster row by 15 rows, stored MSB-first per byte.
 GRAPHIC_PATTERN_06:
         DB $02,$0F  ; width in bytes, height in rows
-        DB $10,$00  ; ...#.... ........
-        DB $30,$02  ; ..##.... ......#.
-        DB $70,$01  ; .###.... .......#
-        DB $FC,$00  ; ######.. ........
-        DB $F8,$11  ; #####... ...#...#
-        DB $F0,$3B  ; ####.... ..###.##
-        DB $E0,$7F  ; ###..... .#######
-        DB $C0,$3F  ; ##...... ..######
-        DB $80,$1F  ; #....... ...#####
-        DB $00,$3F  ; ........ ..######
-        DB $00,$1E  ; ........ ...####.
-        DB $00,$04  ; ........ .....#..
-        DB $00,$48  ; ........ .#..#...
-        DB $00,$F8  ; ........ #####...
-        DB $00,$F8  ; ........ #####...
-
+        DB $10,$00
+        DB $30,$02
+        DB $70,$01
+        DB $FC,$00
+        DB $F8,$11
+        DB $F0,$3B
+        DB $E0,$7F
+        DB $C0,$3F
+        DB $80,$1F
+        DB $00,$3F
+        DB $00,$1E
+        DB $00,$04
+        DB $00,$48
+        DB $00,$F8
+        DB $00,$F8
 ; 1 bytes per raster row by 17 rows, stored MSB-first per byte.
 GRAPHIC_PATTERN_07:
         DB $01,$11  ; width in bytes, height in rows
@@ -3015,62 +3008,79 @@ BIT_ORDER_LOOKUP:
         DB $18,$10,$38,$30,$20,$28,$78,$70,$60,$68,$40,$48
         DB $58,$50,$F8,$F0,$E0,$E8,$C0,$C8,$D8,$D0,$80,$88
 
-; Twelve eight-byte object descriptors, beginning at $0F78.
-; First two bytes in each record select a graphic (high byte, then low byte).
+; Six bytes preceding the eight-byte object descriptor array ($0F78-$0F7D).
+; Do not interpret these bit patterns as a graphic pointer.
+OBJECT_POSITION_LOOKUP_TAIL:
+        DB $98,$90,$B8,$B0,$A0,$A8
+
+; Twelve eight-byte object records, $0F7E-$0FDD.
+; Each begins with a high-byte-first graphics address followed by six
+; preserved descriptor fields. Field-level meanings require caller tracing.
 OBJECT_DESCRIPTOR_TABLE:
 
-; Record 1, graphic $9890.
+; Record 1 at $F7E; graphics at $D3D.
 OBJECT_RECORD_01:
-        DB $98,$90,$B8,$B0,$A0,$A8,$0D,$3D
+        DB $0D,$3D  ; graphics pointer, high byte first
+        DB $20,$14,$00,$D8,$00,$02  ; descriptor fields
 
-; Record 2, graphic $2014.
+; Record 2 at $F86; graphics at $D7B.
 OBJECT_RECORD_02:
-        DB $20,$14,$00,$D8,$00,$02,$0D,$7B
+        DB $0D,$7B  ; graphics pointer, high byte first
+        DB $20,$14,$00,$E0,$00,$02  ; descriptor fields
 
-; Record 3, graphic $2014.
+; Record 3 at $F8E; graphics at $DAD.
 OBJECT_RECORD_03:
-        DB $20,$14,$00,$E0,$00,$02,$0D,$AD
+        DB $0D,$AD  ; graphics pointer, high byte first
+        DB $20,$14,$00,$D8,$00,$02  ; descriptor fields
 
-; Record 4, graphic $2014.
+; Record 4 at $F96; graphics at $DEB.
 OBJECT_RECORD_04:
-        DB $20,$14,$00,$D8,$00,$02,$0D,$EB
+        DB $0D,$EB  ; graphics pointer, high byte first
+        DB $20,$15,$00,$E0,$00,$01  ; descriptor fields
 
-; Record 5, graphic $2015.
+; Record 5 at $F9E; graphics at $E19.
 OBJECT_RECORD_05:
-        DB $20,$15,$00,$E0,$00,$01,$0E,$19
+        DB $0E,$19  ; graphics pointer, high byte first
+        DB $20,$15,$00,$E0,$00,$01  ; descriptor fields
 
-; Record 6, graphic $2015.
+; Record 6 at $FA6; graphics at $E47.
 OBJECT_RECORD_06:
-        DB $20,$15,$00,$E0,$00,$01,$0E,$47
+        DB $0E,$47  ; graphics pointer, high byte first
+        DB $20,$1A,$00,$F0,$00,$03  ; descriptor fields
 
-; Record 7, graphic $201A.
+; Record 7 at $FAE; graphics at $D3D.
 OBJECT_RECORD_07:
-        DB $20,$1A,$00,$F0,$00,$03,$0D,$3D
+        DB $0D,$3D  ; graphics pointer, high byte first
+        DB $40,$34,$00,$D8,$D8,$FE  ; descriptor fields
 
-; Record 8, graphic $4034.
+; Record 8 at $FB6; graphics at $D7B.
 OBJECT_RECORD_08:
-        DB $40,$34,$00,$D8,$D8,$FE,$0D,$7B
+        DB $0D,$7B  ; graphics pointer, high byte first
+        DB $40,$34,$00,$E0,$E0,$FE  ; descriptor fields
 
-; Record 9, graphic $4034.
+; Record 9 at $FBE; graphics at $DAD.
 OBJECT_RECORD_09:
-        DB $40,$34,$00,$E0,$E0,$FE,$0D,$AD
+        DB $0D,$AD  ; graphics pointer, high byte first
+        DB $40,$34,$00,$D8,$D8,$FE  ; descriptor fields
 
-; Record 10, graphic $4034.
+; Record 10 at $FC6; graphics at $DEB.
 OBJECT_RECORD_10:
-        DB $40,$34,$00,$D8,$D8,$FE,$0D,$EB
+        DB $0D,$EB  ; graphics pointer, high byte first
+        DB $40,$35,$00,$E0,$E0,$FF  ; descriptor fields
 
-; Record 11, graphic $4035.
+; Record 11 at $FCE; graphics at $E19.
 OBJECT_RECORD_11:
-        DB $40,$35,$00,$E0,$E0,$FF,$0E,$19
+        DB $0E,$19  ; graphics pointer, high byte first
+        DB $40,$35,$00,$E0,$E0,$FF  ; descriptor fields
 
-; Record 12, graphic $4035.
+; Record 12 at $FD6; graphics at $E47.
 OBJECT_RECORD_12:
-        DB $40,$35,$00,$E0,$E0,$FF,$0E,$47
+        DB $0E,$47  ; graphics pointer, high byte first
+        DB $40,$3A,$00,$F0,$F0,$FD  ; descriptor fields
 
-; Thirteen following object selection/control bytes, $0FD8–$0FE4.
+; Seven trailing object selector/control bytes ($0FDE-$0FE4).
 OBJECT_CONTROL_BYTES:
-        DB $40,$3A,$00,$F0,$F0,$FD,$06,$04,$02,$06,$03,$05
-        DB $01
+        DB $06,$04,$02,$06,$03,$05,$01
 
 ; Unused end-of-ROM fill, $0FE5–$0FFF (27 bytes of $FF).
 ROM_END_FILL:
