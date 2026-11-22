@@ -2,7 +2,15 @@
 
 1976 Midway / Dave Nutting Associates **Intel 8080 arcade game**. 
 
-External barrel shifter and discrete sound circuitry. See the repository's circuit and service PDFs under `docs/`.
+This is the original periscope cabinet, distinct from the Z80 Sea Wolf II and the Astrocade SeaWolf/Missile cartridge. 
+
+The cabinet combines the CRT image with an optical periscope/crosshair and physical torpedo/reload lamps and reflected explosion lamps. Separate peripheral boards include the PC 596-906 periscope commutator, PC 596-907 explosion lights, and PC 596-908 periscope lights, as identified in the original service data.
+
+
+Sea Wolf's game-specific drawing code uses the MB14241 barrel-shifter device. 
+
+
+The original PC 596-909 sound generator is a dedicated discrete analog board, not an Astrocade sound chip. Its board controls separately adjust sonar volume, rate and pitch; torpedo volume; dive volume and tone; ship-hit explosion volume; mine explosion volume; and master volume. 
 
 ![Sea Wolf arcade](images/sea-wolf-33303-marquee.jpg)
 
@@ -50,7 +58,11 @@ mame -window -rompath roms seawolf
 
 ## Interpreter
 
-At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. 
+Sea Wolf uses a 12-command interpreter to control gameplay. 
+
+Instead of programming every action directly in assembly, DNA created compact scripts that call native routines to display graphics, update scores, read controls, manage timing, and control game events. 
+
+The interpreter works alongside the game's interrupt routines, which handle ship movement, torpedoes, and other real-time activity. This approach allowed DNA to build complex gameplay using a small set of reusable commands, an early example of DNA's game-specific interpreted languages. 
 
 ![Sea Wolf interpreter](images/interpreter-seawolf.svg)
 
