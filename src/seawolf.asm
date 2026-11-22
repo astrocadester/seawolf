@@ -1675,7 +1675,7 @@ SCORE_FILL_BYTES_LOOP:
         LD A,$04
         JP RENDER_GAME_TEXT
 
-; Command $0C: advance the script pointer and derive timer phase.
+; Command $0B: advance the script pointer and derive timer phase.
 CMD_ADVANCE_AND_SET_TIMER_PHASE:
         EX DE,HL
         LD ($2000),HL
@@ -1860,20 +1860,20 @@ GAME_SERVICE_VECTOR_SUBTABLE:
         DW $08C7
 
 ; Indexed 16-bit native handler addresses, little endian.
-; Twelve 16-bit native handler vectors indexed by nonzero commands $01–$0C.
+; First word is the reserved $00 slot; $01–$0B index the following words.
 GAME_COMMAND_HANDLER_TABLE:
-        DW CMD_RETURN                        ; $01  RET; no operation
-        DW SCRIPT_STORE_STATE_2011           ; $02  Store inline byte at RAM $2011
-        DW SCRIPT_STORE_STATE_2010           ; $03  Store inline byte at RAM $2010
-        DW INITIALIZE_GAME_STATE             ; $04  Reset and draw start screen
-        DW CMD_RENDER_TEXT                   ; $05  Render inline text specification
-        DW CMD_READ_HARDWARE_PORT            ; $06  Execute generated IN port stub
-        DW SCRIPT_JUMP_ABSOLUTE              ; $07  Jump to inline script address
-        DW CMD_COPY_POINTED_BYTE             ; $08  Copy pointed byte to RAM
-        DW CMD_COPY_INLINE_BYTES_REVERSED    ; $09  Copy inline bytes in reverse order
-        DW CMD_SELECT_AND_RENDER_TEXT        ; $0A  Select and render a message
-        DW CMD_RENDER_SCORE                  ; $0B  Format and render score
-        DW CMD_ADVANCE_AND_SET_TIMER_PHASE   ; $0C  Update timer-phase state
+        DW CMD_RETURN                        ; $00  Reserved return vector (zero uses frame path)
+        DW SCRIPT_STORE_STATE_2011           ; $01  Store next byte at RAM $2011
+        DW SCRIPT_STORE_STATE_2010           ; $02  Store next byte at RAM $2010
+        DW INITIALIZE_GAME_STATE             ; $03  Reset and initialize display
+        DW CMD_RENDER_TEXT                   ; $04  Render inline text specification
+        DW CMD_READ_HARDWARE_PORT            ; $05  Generate and execute IN-port stub
+        DW SCRIPT_JUMP_ABSOLUTE              ; $06  Replace current script address
+        DW CMD_COPY_POINTED_BYTE             ; $07  Copy immediate byte to 16-bit destination
+        DW CMD_COPY_INLINE_BYTES_REVERSED    ; $08  Copy counted inline bytes in reverse
+        DW CMD_SELECT_AND_RENDER_TEXT        ; $09  Select one of two messages and render
+        DW CMD_RENDER_SCORE                  ; $0A  Format and draw score digits
+        DW CMD_ADVANCE_AND_SET_TIMER_PHASE   ; $0B  Advance script and update timer phase
 
 ; Set up bit-shift operands.
 BIT_SHIFT_SETUP:
@@ -1961,7 +1961,7 @@ GRAPHIC_CLEAR_BYTE_LOOP:
         JP NZ,GRAPHIC_CLEAR_ROW_BEGIN
         RET
 
-; Command $0B: convert a BCD field and render a four-character score.
+; Command $0A: convert a BCD field and render a four-character score.
 CMD_RENDER_SCORE:
         EX DE,HL
         LD C,(HL)
@@ -2026,7 +2026,7 @@ SCORE_STORE_SECOND_DIGIT:
         INC DE
         RET
 
-; Command $09: copy a counted inline byte sequence to a destination in reverse order.
+; Command $08: copy a counted inline byte sequence to a destination in reverse order.
 CMD_COPY_INLINE_BYTES_REVERSED:
         EX DE,HL
         LD B,(HL)
@@ -2055,7 +2055,7 @@ TEXT_COPY_BUFFER_BYTE:
         LD ($2000),HL
         RET
 
-; Command $0A: select and render one of two encoded message addresses.
+; Command $09: select and render one of two encoded message addresses.
 CMD_SELECT_AND_RENDER_TEXT:
         EX DE,HL
         CALL SCRIPT_READ_INLINE_ADDRESS
@@ -2086,7 +2086,7 @@ SCRIPT_READ_INLINE_ADDRESS:
         INC HL
         RET
 
-; Command $08: copy the byte at DE to an inline 16-bit RAM destination.
+; Command $07: copy the byte at DE to an inline 16-bit RAM destination.
 CMD_COPY_POINTED_BYTE:
         LD A,(DE)
         INC DE
@@ -2099,7 +2099,7 @@ CMD_COPY_POINTED_BYTE:
         LD (BC),A
         RET
 
-; Command $06: construct and execute an IN port / RET stub in RAM.
+; Command $05: construct and execute an IN port / RET stub in RAM.
 CMD_READ_HARDWARE_PORT:
         EX DE,HL
         LD B,(HL)
@@ -2153,7 +2153,7 @@ INPUT_TOGGLE_SELECTED_BIT:
         LD L,C
         JP (HL)
 
-; Command $05: read inline text source, screen address and length, then render.
+; Command $04: read inline text source, screen address and length, then render.
 CMD_RENDER_TEXT:
         EX DE,HL
         LD A,(HL)
