@@ -82,7 +82,7 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 
 | `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
 
-The first six graphics are **verified ship assets**: the spawn routine `$064A–$06A3` selects a ship type and copies a descriptor from either `$0F7E` or `$0FAE`; both directional groups point to those same six graphic records. Each ROM graphic record contains a byte width, a strip count, then width × count bytes, but the actual drawing routine continues to the display-memory boundary. ROM record dimensions are therefore distinct from the position-dependent onscreen result. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
+The first six graphics are **verified ship assets**: the spawn routine `$064A–$06A3` selects a ship type and copies a descriptor from either `$0F7E` or `$0FAE`; both directional groups point to those same six graphic records. The alternate bank also sets object flag `$10`, which the renderer uses to choose the reversed shifter path. Each ROM graphic record contains a byte width, a strip count, then width × count bytes, but the actual drawing routine continues to the display-memory boundary. ROM record dimensions are therefore distinct from the position-dependent onscreen result. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
 
 ![Sea Wolf ROM graphics — shifter data study](images/seawolf-graphics-re.svg)
 
