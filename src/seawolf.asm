@@ -18,6 +18,20 @@
 
 TEXT_SPACE EQU $40
 
+; Sea Wolf indexed command byte definitions (native dispatcher at $045E).
+SCRIPT_FRAME_CONTROL             EQU $00
+SCRIPT_STORE_STATE_2011          EQU $01
+SCRIPT_STORE_STATE_2010          EQU $02
+SCRIPT_INITIALIZE_GAME           EQU $03
+SCRIPT_RENDER_TEXT               EQU $04
+SCRIPT_READ_PORT                 EQU $05
+SCRIPT_JUMP                      EQU $06
+SCRIPT_COPY_BYTE                 EQU $07
+SCRIPT_COPY_BLOCK_REVERSED       EQU $08
+SCRIPT_SELECT_TEXT               EQU $09
+SCRIPT_RENDER_SCORE              EQU $0A
+SCRIPT_UPDATE_TIMER_PHASE        EQU $0B
+
 PRGPTR EQU $2000
 GTIME EQU $2002
 CREDIT EQU $2005
@@ -1811,27 +1825,170 @@ CHECK_COIN_INPUT:
 
 ; Initial game command stream ($0929).
 GAME_SCRIPT_STREAMS:
-        DB $04,$01,$B8,$0E,$30,$3E,$09,$05,$20,$33,$38,$E6
-        DB $0E,$F1,$0E,$04,$1A,$CC,$0E,$02,$3C,$0A,$06,$20
-        DB $E9,$21,$25,$3E,$0A,$2B,$20,$E9,$21,$35,$3E,$02
-        DB $0F,$04,$09,$C3,$0E,$0B,$2C,$01,$1E,$00,$04,$09
-        DB $B8,$0E,$0B,$2C,$01,$1E,$00,$06,$4E,$09
 
-; Second command stream, selected at $056C ($0963).
+; $929 Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $01  ; glyph count
+        DW $0EB8  ; source
+        DW $3E30  ; video destination
+
+; $92F Select and render one of two text strings.
+        DB SCRIPT_SELECT_TEXT
+        DW $2005  ; selector
+        DW $3833  ; video buffer
+        DW $0EE6  ; first message
+        DW $0EF1  ; second message
+
+; $938 Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $1A  ; glyph count
+        DW $0ECC  ; source
+        DW $3C02  ; video destination
+
+; $93E Render score field at destination.
+        DB SCRIPT_RENDER_SCORE
+        DW $2006  ; score source
+        DW $21E9  ; digit buffer
+        DW $3E25  ; video destination
+
+; $945 Render score field at destination.
+        DB SCRIPT_RENDER_SCORE
+        DW $202B  ; score source
+        DW $21E9  ; digit buffer
+        DW $3E35  ; video destination
+
+; $94C Set byte at $2010.
+        DB SCRIPT_STORE_STATE_2010
+        DB $0F
+
+; $94E Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $09  ; glyph count
+        DW $0EC3  ; source
+        DW $2C0B  ; video destination
+
+; $954 Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $1E
+
+; $956 Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $957 Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $09  ; glyph count
+        DW $0EB8  ; source
+        DW $2C0B  ; video destination
+
+; $95D Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $1E
+
+; $95F Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $960 Jump to 16-bit script address.
+        DB SCRIPT_JUMP
+        DW $094E  ; next script
+
 GAME_SCRIPT_SECONDARY:
-        DB $03,$04,$08,$FC,$0E,$0C,$2C,$04,$0A,$CC,$0E,$02
-        DB $3C,$0A,$06,$20,$E9,$21,$25,$3E,$09,$05,$20,$33
-        DB $38,$E6,$0E,$F1,$0E,$01,$5A,$00,$08,$09,$60,$20
-        DB $EB,$0D,$20,$15,$00,$E0,$00,$01,$C4,$01,$5A,$00
-        DB $08,$09,$EF,$20,$75,$0E,$9C,$E0,$FA,$00,$A8,$00
-        DB $C0,$01,$B4,$00,$06,$63,$09
 
-; Script and inline operand continuation ($09A6).
+; $963 Reset game state and display.
+        DB SCRIPT_INITIALIZE_GAME
+
+; $964 Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $08  ; glyph count
+        DW $0EFC  ; source
+        DW $2C0C  ; video destination
+
+; $96A Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $0A  ; glyph count
+        DW $0ECC  ; source
+        DW $3C02  ; video destination
+
+; $970 Render score field at destination.
+        DB SCRIPT_RENDER_SCORE
+        DW $2006  ; score source
+        DW $21E9  ; digit buffer
+        DW $3E25  ; video destination
+
+; $977 Select and render one of two text strings.
+        DB SCRIPT_SELECT_TEXT
+        DW $2005  ; selector
+        DW $3833  ; video buffer
+        DW $0EE6  ; first message
+        DW $0EF1  ; second message
+
+; $980 Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $5A
+
+; $982 Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $983 Copy counted inline values in descending destination order.
+        DB SCRIPT_COPY_BLOCK_REVERSED
+        DB $09  ; byte count
+        DW $2060  ; destination
+        DB $EB,$0D,$20,$15,$00,$E0,$00,$01,$C4  ; payload
+
+; $990 Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $5A
+
+; $992 Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $993 Copy counted inline values in descending destination order.
+        DB SCRIPT_COPY_BLOCK_REVERSED
+        DB $09  ; byte count
+        DW $20EF  ; destination
+        DB $75,$0E,$9C,$E0,$FA,$00,$A8,$00,$C0  ; payload
+
+; $9A0 Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $B4
+
+; $9A2 Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $9A3 Jump to 16-bit script address.
+        DB SCRIPT_JUMP
+        DW $0963  ; next script
+
 GAME_SCRIPT_AUXILIARY:
-        DB $01,$0F,$00,$03,$04,$09,$29,$0F,$0E,$3C,$07,$28
-        DB $22,$20,$07,$0A,$21,$20,$0B
 
-; Nine original packed input-code values ($09B9).
+; $9A6 Set byte at $2011.
+        DB SCRIPT_STORE_STATE_2011
+        DB $0F
+
+; $9A8 Yield to native frame/control services.
+        DB SCRIPT_FRAME_CONTROL
+
+; $9A9 Reset game state and display.
+        DB SCRIPT_INITIALIZE_GAME
+
+; $9AA Render text: count, source, destination.
+        DB SCRIPT_RENDER_TEXT
+        DB $09  ; glyph count
+        DW $0F29  ; source
+        DW $3C0E  ; video destination
+
+; $9B0 Copy immediate byte to RAM address.
+        DB SCRIPT_COPY_BYTE
+        DB $28  ; byte
+        DW $2022  ; target
+
+; $9B4 Copy immediate byte to RAM address.
+        DB SCRIPT_COPY_BYTE
+        DB $0A  ; byte
+        DW $2021  ; target
+
+; $9B8 Update game timer phase.
+        DB SCRIPT_UPDATE_TIMER_PHASE
+
 PLAYER_INPUT_CODES_A:
         DB $00,$48,$44,$42,$41,$88,$84,$82,$81
 
