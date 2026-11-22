@@ -1,18 +1,29 @@
 # Sea Wolf
 
-1976 Midway / Dave Nutting Associates **Intel 8080 arcade game**. This is the original black-and-white arcade cabinet, **not** the Z80 Astrocade *SeaWolf/Missile* cartridge or 1978 *Sea Wolf II*.
+1976 Midway / Dave Nutting Associates **Intel 8080 arcade game**. 
 
-![Sea Wolf arcade](images/sea-wolf-00904-01.jpg)
+External barrel shifter and discrete sound circuitry. See the repository's circuit and service PDFs under `docs/`.
 
-## Reconstruction
+![Sea Wolf arcade](images/sea-wolf-33303-marquee.jpg)
 
-`src/seawolf.asm` reconstructs the **four original 1 KB ROMs** as a 4 KB address-space image. Native 8080 instructions are expressed in zmac's Z80-compatible syntax where instruction bytes have been checked against the original ROM. Indexed bytecode scripts, sprite descriptors, vectors, graphics and other data remain byte-preserving directives where appropriate. The interpreter at `$045E` uses a game-program pointer at `$2000` and a native-handler lookup table at `$09E8`.
+## Build
 
-The original ROMs were compared against an independently annotated historic disassembly. That disassembly also contains later experimental changes; **the archived 1976 ROM files—not the modified code—are authoritative**. Areas not reliably recovered as native code are left as `DB` and explicitly bounded rather than silently misidentifying image data or interpreter operands as instructions.
+**Linux**
+```sh
+./build.sh
+```
+
+**Windows**
+```bat
+build.bat
+```
+
+**MAME**
+```sh
+mame -window -rompath roms seawolf 
+```
 
 ## Memory map
-
-![Sea Wolf memory map](images/seawolf-memory-map.svg)
 
 | Address | Purpose |
 | --- | --- |
@@ -26,24 +37,8 @@ The original ROMs were compared against an independently annotated historic disa
 | `$21E9–$21EF` | Time/score character buffer |
 | `$2400+` | Monochrome display memory / bitmap |
 
-Hardware: original Midway 8080 black-and-white video system; external barrel shifter and discrete sound circuitry. See the repository's circuit and service PDFs under `docs/`.
+![Sea Wolf memory map](images/seawolf-memory-map.svg)
 
-## Build (zmac v1.3)
-
-From the repository root:
-
-**Linux**
-```sh
-chmod +x build.sh
-./build.sh
-```
-
-**Windows**
-```bat
-build.bat
-```
-
-Build scripts use bundled `tools/zmac` / `tools/zmac.exe` v1.3 directly. They write the assembled image, listing and four 1 KB chip files to ignored `build/`, verify the original-ROM SHA-1 values, then package the ignored `roms/seawolf.zip` for MAME. No `zout` output directory is used. No Python, Maven, or GitHub Actions.
 
 | ROM | Address | SHA-1 |
 | --- | --- | --- |
@@ -52,51 +47,12 @@ Build scripts use bundled `tools/zmac` / `tools/zmac.exe` v1.3 directly. They wr
 | sw0043.f | `$0800–$0BFF` | `385198434b08fe4651ad2c920d44fb49cfe0bc33` |
 | sw0044.e | `$0C00–$0FFF` | `bd345dd72fed8ce15da76c381782b025f71b006f` |
 
-```sh
-mame seawolf -window -skip_gameinfo -rompath roms
-```
 
-## ROM data and graphics organization
+## Interpreter
 
-The disassembly follows [Checkmate's source style](https://github.com/astrocadester/checkmate/blob/main/src/checkmate.asm): native Intel 8080 symbols and routine comments, named command tables, original graphics-record boundaries, and individual font glyphs. Data remains data, not speculative native opcodes.
+At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. 
 
-| Original address | Decoded structure |
-| --- | --- |
-| `$0929–$0962` | Initial interpreted command stream |
-| `$0963–$09A5` | Secondary command stream |
-| `$09A6–$09B8` | Auxiliary script/data |
-| `$09B9–$09C9` | Two packed input-code tables |
-| `$09CA–$09E7` | Fifteen little-endian native service addresses (`DW`) |
-| `$09E8–$09FF` | Reserved word plus 11 indexed native handler vectors (`DW`) |
-| `$0B8F–$0BF2` | Ten labeled 8×10 digit glyphs |
-| `$0BF3–$0BFF` | 13 trailing graphic bytes, individual bitmap rows |
-| `$0C00–$0C38` | 57 pre-alphabet raster/control bytes, individually shown |
-| `$0C39–$0D3C` | 26 labeled 8×10 alphabetic glyphs |
-| `$0D3D–$0EB4` | Six ship graphics and five smaller graphics records, with their ROM data grouped into original strips |
-| `$0EB5–$0F03` | Display control, packed messages and symbol sequences |
-| `$0F24–$0F53` | Display text/legend and control parameters |
-| `$0F54–$0F77` | Movement/bit-pattern lookup |
-| `$0F78–$0F7D` | Six-byte position-lookup tail preceding the object records |
-| `$0F7E–$0FDD` | Twelve eight-byte object records, graphic pointer at bytes 0–1 |
-| `$0FDE–$0FE4` | Seven trailing object-control bytes |
-
-| `$0FE5–$0FFF` | 27 bytes of `$FF` end-of-ROM fill |
-
-The first six graphics are **verified ship assets**: the spawn routine `$064A–$06A3` selects a ship type and copies a descriptor from either `$0F7E` or `$0FAE`; both directional groups point to those same six graphic records. The alternate bank also sets object flag `$10`, which the renderer uses to choose the reversed shifter path. Each ROM graphic record contains a byte width, a strip count, then width × count bytes, but the actual drawing routine continues to the display-memory boundary. ROM record dimensions are therefore distinct from the position-dependent onscreen result. The twelve eight-byte records begin at `$0F7E` (not `$0F78`), and their graphics pointers are high-byte first. The six preceding bytes belong to a separate lookup tail. These address fields must not be converted blindly to little-endian `DW`.
-
-![Sea Wolf ROM graphics — shifter data study](images/seawolf-graphics-re.svg)
-
-The two panels for each of the eleven records show unshifted ROM pixels in normal and bit-reversed order. This comparison is grounded in Sea Wolf's MAME hardware I/O: writes to port `$03` load the MB14241, port `$04` sets shift count, port `$03` reads its normal result, and port `$00` reads the bit-reversed result. The drawing code also emits a final zero to flush the shifter and advances by the `$20`-byte screen-memory stride. **This is a verified bit-order illustration, not a fabricated final screenshot.**
-
-The display text is expressed as literal assembly strings with the original `$40` spacing byte (`TEXT_SPACE`), including `GAME OVER`, `HIGH SCORE`, `YOUR SCORE`, `INSERT COIN`, `PUSH BUTTONS`, and `SEA WOLF`. The last two phrases share the byte at `$0EFC`—the last `S` in `BUTTONS` is the first `S` in `SEA WOLF`.
-
-The `$FF` tail is **data**, not 27 active `RST $38` instructions. `$FF` happens to decode as `RST 7` (vector `$0038`) if executed, but no execution edge to this fill region has been established.
-
-See [Sea Wolf RE](docs/SEA-WOLF-RE.md) for the record inventory and remaining semantic investigations.
-
-## The indexed game interpreter
-
-At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. The source now records the **command number, native handler symbol, and inspected operation on each `DW` line**. The first table word is a reserved return address; command `$00` enters frame control without indexing the table. Commands **`$01–$0B`** address the eleven subsequent handlers: `$01`/`$02` store inline bytes, `$06` changes the script pointer, and the others handle text, scoring, byte transfer, hardware I/O and timing. The three ROM scripts are now decoded into **34 symbolic commands across 144 byte-exact bytes**, with inline words expressed as `DW`. See the [handler and script RE](docs/SEA-WOLF-RE.md#native-interpreter-and-interpreted-scripts).
+![Sea Wolf interpreter](images/interpreter-seawolf.svg)
 
 ```mermaid
 flowchart TD
@@ -108,37 +64,3 @@ flowchart TD
   F --> G["Advance / branch game program"]
   G --> B
 ```
-
-This is evidence of DNA's evolving **numbered native game-word** architecture, preceding the later named, composable Z80 TERSE language. It is not evidence that Sea Wolf's 8080 source was written in Forth.
-
-## Repository
-
-`src/seawolf.asm`  
-Original-address, mixed native-assembly/data disassembly with named native routines and branches, classified game-command data, and all 36 inline font glyphs.
-
-`build.sh` / `build.bat`  
-Original ROM reconstruction, splitting, SHA-1 verification and packaging.
-
-`images/seawolf-memory-map.svg`  
-Editable address-space memory map.
-
-`images/seawolf-graphics-re.svg`  
-Byte-exact diagrams of eleven original graphics records in normal and reversed bit order.
-
-`roms/original/seawolf.zip`  
-Tracked original reference ROM set, retained unchanged.
-
-`build/`  
-Ignored generated image, listing and four split ROM chips.
-
-`roms/seawolf.zip`  
-Ignored generated MAME ROM set.
-
-`docs/`  
-Contemporary Sea Wolf service, graphics and sound documents.
-
-**Research context:** Gorf/TERSE follows a different Z80 direct-threaded execution model, not a direct bytecode continuation. The source baseline here is intended for the next DNA 8080 interpreter ancestry comparison.
-
-## Reverse-engineering progress
-
-The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Six ship types are tied to the original spawn path; all eleven indexed command handlers and the reserved table word have verified entry-point labels. The three interpreted streams are decoded into 34 typed command records. Full shifter-position render reproduction, individual descriptor field meanings and native execution verification remain open. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).

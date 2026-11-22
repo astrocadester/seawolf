@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1672" height="596" viewBox="0 214 1672 596" role="img" aria-labelledby="title desc">
+<title id="title">Sea Wolf — indexed Intel 8080 interpreter</title>
+<desc id="desc">Sea Wolf command stream, fetch/decode/execute loop, and twelve command names from $00 through $0B. Transparent background and no title banner.</desc>
+<defs>
+  <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dce9ff"/><stop offset="1" stop-color="#b0cafa"/></linearGradient>
+  <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L7 4 L0 8 Z" fill="#1246e4"/></marker>
+  <marker id="arrowDark" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L7 4 L0 8 Z" fill="#152434"/></marker>
+</defs>
+<!-- Command stream (left) -->
+<rect x="22" y="290" width="383" height="432" rx="22" fill="#fff" stroke="#204ceb" stroke-width="3"/>
+<path d="M24 368 V312 Q24 292 44 292 H383 Q403 292 403 312 V368 Z" fill="url(#top)"/>
+<path d="M22 368 H405" stroke="#204ceb" stroke-width="2"/>
+<text x="213.5" y="337" fill="#0d182a" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="30">Command Stream</text>
+<g fill="#0d182a" font-family="Arial,Helvetica,sans-serif">
+<text x="46" y="409" font-weight="700" font-size="23">$05</text><text x="133" y="409" font-size="21">Read hardware port</text>
+<text x="46" y="457" font-weight="700" font-size="23">$07</text><text x="133" y="457" font-size="21">Copy byte to state</text>
+<text x="46" y="505" font-weight="700" font-size="23">$08</text><text x="133" y="505" font-size="21">Copy block reversed</text>
+<text x="46" y="553" font-weight="700" font-size="23">$0A</text><text x="133" y="553" font-size="21">Render score</text>
+<text x="46" y="601" font-weight="700" font-size="23">$0B</text><text x="133" y="601" font-size="21">Update timer phase</text>
+<text x="46" y="649" font-weight="700" font-size="23">$00</text><text x="133" y="649" font-size="21">Frame control</text>
+<text x="46" y="697" font-weight="700" font-size="23">...</text>
+</g>
+<g fill="none" stroke="#2453e8" stroke-width="1.4"><path d="M22 423 H405 M22 471 H405 M22 519 H405 M22 567 H405 M22 615 H405 M22 663 H405"/></g>
+<!-- Native interpreter flow (center) -->
+<g fill="url(#top)" stroke="#204ceb" stroke-width="3">
+<rect x="456" y="260" width="565" height="92" rx="23"/>
+<rect x="456" y="405" width="565" height="92" rx="23"/>
+<rect x="456" y="550" width="565" height="92" rx="23"/>
+<rect x="456" y="695" width="565" height="92" rx="23"/>
+</g>
+<g fill="#0d182a" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="32">
+<text x="738.5" y="319">Fetch Next Command</text>
+<text x="738.5" y="464">Decode / Dispatch</text>
+<text x="738.5" y="609">Execute 8080 Routine</text>
+<text x="738.5" y="754">Next Command</text>
+</g>
+<!-- Interpreter routine table (right) -->
+<rect x="1165" y="224" width="480" height="576" rx="19" fill="white" stroke="#204ceb" stroke-width="3"/>
+<path d="M1167 295 V243 Q1167 226 1184 226 H1626 Q1643 226 1643 243 V295 Z" fill="url(#top)"/>
+<path d="M1165 295 H1645 M1285 224 V800" fill="none" stroke="#204ceb" stroke-width="1.5"/>
+<g fill="#0d182a" font-family="Arial,Helvetica,sans-serif"><text x="1225" y="270" text-anchor="middle" font-weight="700" font-size="28">Word</text><text x="1466" y="270" text-anchor="middle" font-weight="700" font-size="28">Routine</text></g>
+<g fill="#0d182a" font-family="Arial,Helvetica,sans-serif" font-size="19">
+<text x="1225" y="326" text-anchor="middle" font-weight="700">$00</text><text x="1304" y="326">Frame control</text>
+<text x="1225" y="368" text-anchor="middle" font-weight="700">$01</text><text x="1304" y="368">Store state $2011</text>
+<text x="1225" y="410" text-anchor="middle" font-weight="700">$02</text><text x="1304" y="410">Store state $2010</text>
+<text x="1225" y="452" text-anchor="middle" font-weight="700">$03</text><text x="1304" y="452">Initialize game</text>
+<text x="1225" y="494" text-anchor="middle" font-weight="700">$04</text><text x="1304" y="494">Render text</text>
+<text x="1225" y="536" text-anchor="middle" font-weight="700">$05</text><text x="1304" y="536">Read hardware port</text>
+<text x="1225" y="578" text-anchor="middle" font-weight="700">$06</text><text x="1304" y="578">Jump to script</text>
+<text x="1225" y="620" text-anchor="middle" font-weight="700">$07</text><text x="1304" y="620">Copy byte</text>
+<text x="1225" y="662" text-anchor="middle" font-weight="700">$08</text><text x="1304" y="662">Copy block reversed</text>
+<text x="1225" y="704" text-anchor="middle" font-weight="700">$09</text><text x="1304" y="704">Select text</text>
+<text x="1225" y="746" text-anchor="middle" font-weight="700">$0A</text><text x="1304" y="746">Render score</text>
+<text x="1225" y="788" text-anchor="middle" font-weight="700">$0B</text><text x="1304" y="788">Update timer phase</text>
+</g>
+<g fill="none" stroke="#2453e8" stroke-width="1.2"><path d="M1165 337 H1645 M1165 379 H1645 M1165 421 H1645 M1165 463 H1645 M1165 505 H1645 M1165 547 H1645 M1165 589 H1645 M1165 631 H1645 M1165 673 H1645 M1165 715 H1645 M1165 757 H1645"/></g>
+<!-- Directional links: arrows have short visible shafts -->
+<path d="M405 306 H447" fill="none" stroke="#1246e4" stroke-width="4" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+<path d="M738.5 358 V396" fill="none" stroke="#152434" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowDark)"/>
+<path d="M738.5 503 V541" fill="none" stroke="#152434" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowDark)"/>
+<path d="M738.5 648 V686" fill="none" stroke="#152434" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowDark)"/>
+<path d="M1023 741 H1083 V306 H1032" fill="none" stroke="#1246e4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowBlue)"/>
+<path d="M1023 451 H1154" fill="none" stroke="#1246e4" stroke-width="4" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+</svg>

@@ -1,3 +1,0 @@
-# Mandatory coding assistant instructions
-
-Before any change read ENGINEERING-RULES.md, docs/SPRINT-PLAN.md, docs/TECHNICAL-DEBT.md. Original code, language, interpreter, native XC/compiler, runtime and DATA are authoritative. The original TERSE loader/XC owns complete source parsing, definitions, compilation order, target addresses. Never delegate these to JavaScript/Python. Host scripts are permitted only for native tool orchestration, genuine output packaging and independent verification. Hardware-specific assembly must be explicit. STOP and obtain user approval before substitutes or deviations. Preserve existing plans; claim only executed tests.

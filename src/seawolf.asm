@@ -9,11 +9,7 @@
 ; Software  : Native game routines and indexed command interpreter
 ;
 ; ROM       : sw0041.h / sw0042.g / sw0043.f / sw0044.e
-; Build     : bundled zmac v1.3; four original 1 KB ROM devices
-; Reference : roms/original/seawolf.zip
 ;
-; Original ROM bytes are authoritative. Indexed command streams, bitmap
-; characters, graphic frames and descriptor tables remain ROM data.
 ;*******************************************************************************
 
 TEXT_SPACE EQU $40
@@ -43,7 +39,7 @@ SHIP_TABLE EQU $0F7E
 
         ORG $0000
 
-; ROM device sw0041.h — SHA-1 b538277d3a633dd8a3179cff202f18d322e6fe17
+; ROM device sw0041.h - SHA-1 b538277d3a633dd8a3179cff202f18d322e6fe17
 
 ; Reset entry and 8080 stack setup.
 RESET_ENTRY:
@@ -3278,4 +3274,3 @@ ROM_END_FILL:
 
         END
 
-; End original ROM image
