@@ -23,3 +23,9 @@ Close only with project evidence/commits. See ENGINEERING-RULES.md.
 These are evidence gates, not substitutes for original software. The inherited ENG items remain as originally recorded.
 
 Style/layout follow-up: all original `Lxxxx` labels have been replaced with contextual identifiers. Their precise control-flow interpretation remains subject to emulator tracing; naming alone is not verification. Build output is now isolated under ignored `build/` and `roms/seawolf.zip`.
+
+### SW-RE byte and source validation status — 2026-11-21
+
+- Data classification is now evidence-based: eleven graphics with width/height/raster row consistency; 12 object records whose first two bytes are a high-byte-first graphic pointer; and 27 `$FF` bytes at ROM end. Exact graphic IDs and remaining descriptor fields remain unverified.
+- Native assembler execution, original ROM checksums and MAME runtime remain outstanding. Source-level comparisons of rewritten literal DB ranges were performed and matched; they do not replace compilation verification.
+- `$0BF3–$0BFF` and `$0C00–$0C38` are bounded raster/control data; no invented glyph purpose is assigned beyond what the bytes establish.
