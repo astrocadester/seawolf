@@ -1,7 +1,11 @@
-src/*.bin
-src/*.lst
+# Generated artifacts; original reference ROMs remain tracked.
+build/
+roms/seawolf.zip
 roms/sw0041.h
 roms/sw0042.g
 roms/sw0043.f
 roms/sw0044.e
-roms/seawolf.zip
+src/*.bin
+src/*.lst
+
+cfg/

@@ -1,40 +1,23 @@
 # Sea Wolf
 
-1976 Midway / Dave Nutting Associates **Intel 8080 arcade game**. This is the original black-and-white arcade cabinet, **not** the Z80 Astrocade *SeaWolf/Missile* cartridge or 1978 *Sea Wolf II*.
+1976 Midway / Dave Nutting Associates **Intel 8080 arcade game**. 
 
-![Sea Wolf arcade](images/sea-wolf-00904-01.jpg)
+This is the original periscope cabinet, distinct from the Z80 Sea Wolf II and the Astrocade SeaWolf/Missile cartridge. 
 
-## Reconstruction
+The cabinet combines the CRT image with an optical periscope/crosshair and physical torpedo/reload lamps and reflected explosion lamps. Separate peripheral boards include the PC 596-906 periscope commutator, PC 596-907 explosion lights, and PC 596-908 periscope lights, as identified in the original service data.
 
-`src/seawolf.asm` reconstructs the **four original 1 KB ROMs** as a 4 KB address-space image. Native 8080 instructions are expressed in zmac's Z80-compatible syntax where instruction bytes have been checked against the original ROM. Indexed bytecode scripts, sprite descriptors, vectors, graphics and other data remain byte-preserving directives where appropriate. The interpreter at `$045E` uses a game-program pointer at `$2000` and a native-handler lookup table at `$09E8`.
 
-The original ROMs were compared against an independently annotated historic disassembly. That disassembly also contains later experimental changes; **the archived 1976 ROM files—not the modified code—are authoritative**. Areas not reliably recovered as native code are left as `DB` and explicitly bounded rather than silently misidentifying image data or interpreter operands as instructions.
+Sea Wolf's game-specific drawing code uses the MB14241 barrel-shifter device. 
 
-## Memory map
 
-![Sea Wolf memory map](images/seawolf-memory-map.svg)
+The original PC 596-909 sound generator is a dedicated discrete analog board, not an Astrocade sound chip. Its board controls separately adjust sonar volume, rate and pitch; torpedo volume; dive volume and tone; ship-hit explosion volume; mine explosion volume; and master volume. 
 
-| Address | Purpose |
-| --- | --- |
-| `$0000–$03FF` | sw0041.h — reset, interrupts, core display/game services |
-| `$0400–$07FF` | sw0042.g — main game loop, indexed interpreter, movement/events |
-| `$0800–$0BFF` | sw0043.f — game programs, command/data tables, native routines |
-| `$0C00–$0FFF` | sw0044.e — further services, sprites and object data |
-| `$2000–$2001` | Interpreted game-program pointer |
-| `$2002–$2030` | Timers, credits, score, input and scheduler working state |
-| `$2031–$215E` | Ship, mine and torpedo object descriptors |
-| `$21E9–$21EF` | Time/score character buffer |
-| `$2400+` | Monochrome display memory / bitmap |
+![Sea Wolf arcade](images/sea-wolf-33303-marquee.jpg)
 
-Hardware: original Midway 8080 black-and-white video system; external barrel shifter and discrete sound circuitry. See the repository's circuit and service PDFs under `docs/`.
-
-## Build (zmac v1.3)
-
-From the repository root:
+## Build
 
 **Linux**
 ```sh
-chmod +x build.sh
 ./build.sh
 ```
 
@@ -43,7 +26,27 @@ chmod +x build.sh
 build.bat
 ```
 
-Build scripts use the supplied `tools/zmac` / `tools/zmac.exe` directly. They assemble `src/seawolf.asm`, split it into four 1 KB chip files, verify the official original-ROM SHA-1 values, and package `roms/seawolf.zip` for MAME. No Python, Maven, or GitHub Actions.
+**MAME**
+```sh
+mame -window -rompath roms seawolf 
+```
+
+## Memory map
+
+| Address | Purpose |
+| --- | --- |
+| `$0000–$03FF` | sw0041.h — reset, interrupts, core display/game services |
+| `$0400–$07FF` | sw0042.g — main game loop, indexed interpreter, movement/events |
+| `$0800–$0BFF` | sw0043.f — game programs, command/data tables, native routines |
+| `$0C00–$0FFF` | sw0044.e — character graphics, display legends, ship/projectile frames and descriptor tables |
+| `$2000–$2001` | Interpreted game-program pointer |
+| `$2002–$2030` | Timers, credits, score, input and scheduler working state |
+| `$2031–$215E` | Ship, mine and torpedo object descriptors |
+| `$21E9–$21EF` | Time/score character buffer |
+| `$2400+` | Monochrome display memory / bitmap |
+
+![Sea Wolf memory map](images/seawolf-memory-map.svg)
+
 
 | ROM | Address | SHA-1 |
 | --- | --- | --- |
@@ -52,13 +55,16 @@ Build scripts use the supplied `tools/zmac` / `tools/zmac.exe` directly. They as
 | sw0043.f | `$0800–$0BFF` | `385198434b08fe4651ad2c920d44fb49cfe0bc33` |
 | sw0044.e | `$0C00–$0FFF` | `bd345dd72fed8ce15da76c381782b025f71b006f` |
 
-```sh
-mame seawolf -window -skip_gameinfo -rompath roms
-```
 
-## The indexed game interpreter
+## Interpreter
 
-At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. Its native handlers implement game behavior, while command bytes and inline operands describe what happens next.
+Sea Wolf uses a 12-command interpreter to control gameplay. 
+
+Instead of programming every action directly in assembly, DNA created compact scripts that call native routines to display graphics, update scores, read controls, manage timing, and control game events. 
+
+The interpreter works alongside the game's interrupt routines, which handle ship movement, torpedoes, and other real-time activity. This approach allowed DNA to build complex gameplay using a small set of reusable commands, an early example of DNA's game-specific interpreted languages. 
+
+![Sea Wolf interpreter](images/interpreter-seawolf.svg)
 
 ```mermaid
 flowchart TD
@@ -70,24 +76,3 @@ flowchart TD
   F --> G["Advance / branch game program"]
   G --> B
 ```
-
-This is evidence of DNA's evolving **numbered native game-word** architecture, preceding the later named, composable Z80 TERSE language. It is not evidence that Sea Wolf's 8080 source was written in Forth.
-
-## Repository
-
-`src/seawolf.asm`  
-Original-address, mixed native-assembly/data disassembly of the four ROMs.
-
-`build.sh` / `build.bat`  
-Original ROM reconstruction, splitting, SHA-1 verification and packaging.
-
-`images/seawolf-memory-map.svg`  
-Editable source diagram identifying ROM, interpreter, RAM and display domains.
-
-`roms/original/seawolf.zip`  
-Reference MAME ROM set, retained unchanged.
-
-`docs/`  
-Contemporary Sea Wolf service, graphics and sound documents.
-
-**Research context:** Gorf/TERSE follows a different Z80 direct-threaded execution model, not a direct bytecode continuation. The source baseline here is intended for the next DNA 8080 interpreter ancestry comparison.
