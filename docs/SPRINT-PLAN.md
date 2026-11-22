@@ -15,3 +15,9 @@ Checkmate source style aligned in the active branch: header, section spacing, na
 - Remaining gates: inspect actual object rendering and command parameter contracts; run original zmac build, four chip SHA-1 comparisons, MAME display/input/score/sound checks before merge. No claim of emulator validation in this milestone.
 
 Latest source cleanup: the `$09CA–$09E7` bytes resolve to fifteen native address entries (`DW`), replacing erroneous input-edge/debounce annotations; graphics record names no longer assert ship identity. Original byte ordering retained.
+
+## SW-RE ship graphics and handlers — 2026-11-21
+
+- All 12 `GAME_COMMAND_HANDLER_TABLE` entries now use actual native entry labels and have command number/effect inline; `$01` is the `RET` at `$08C7`.
+- Verified that `$0F7E` and `$0FAE` select two directional groups of six ships. The alternate path sets flag `$10` and uses reversed MB14241 output at `$01B8`, while the normal path at `$0192` reads port `$03`.
+- New `images/seawolf-graphics-re.svg` shows all eleven original graphics records in normal and reversed bit orientation at shift zero. Follow-up: verify every shift/placement value with MAME execution, not standalone render assumptions.
