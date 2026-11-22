@@ -11,32 +11,47 @@ Version: v20261121-0001
 
 ## Native interpreter and interpreted scripts
 
-The native dispatcher at `$045E` reads the command pointed to by RAM `$2000`. Command zero enters the frame-service path; commands `$01–$0C` select twelve little-endian native handler addresses at `$09E8`.
+The dispatcher at `$045E` fetches its command from the program pointer in RAM `$2000`. A zero byte enters the native frame-control path. A nonzero byte is doubled (`RLCA`) and added to the table base `$09E8`; this makes the **first word a reserved $00 entry**, not command $01. The original table has eleven executable command numbers, **$01–$0B**.
 
-| Command | Address | Handler symbol | Verified operation |
+| Command | Native address | Handler symbol | Operation |
 | --- | --- | --- | --- |
-| `$01` | `$08C7` | `CMD_RETURN` | Single `RET`: no operation |
-| `$02` | `$0B7C` | `SCRIPT_STORE_STATE_2011` | Store next inline byte at RAM `$2011` |
-| `$03` | `$0B72` | `SCRIPT_STORE_STATE_2010` | Store next inline byte at RAM `$2010` |
-| `$04` | `$08A2` | `INITIALIZE_GAME_STATE` | Reset state and draw the introductory screen |
-| `$05` | `$0B22` | `CMD_RENDER_TEXT` | Read inline source/address/count and render text |
-| `$06` | `$0AED` | `CMD_READ_HARDWARE_PORT` | Assemble `IN port; RET` in RAM and dispatch through it |
-| `$07` | `$0B86` | `SCRIPT_JUMP_ABSOLUTE` | Replace script cursor with inline 16-bit target |
-| `$08` | `$0AE1` | `CMD_COPY_POINTED_BYTE` | Write the byte at the supplied source pointer to an inline destination |
-| `$09` | `$0A9F` | `CMD_COPY_INLINE_BYTES_REVERSED` | Write counted inline bytes backward from destination |
-| `$0A` | `$0ABC` | `CMD_SELECT_AND_RENDER_TEXT` | Choose one of two message addresses using a source value |
-| `$0B` | `$0A53` | `CMD_RENDER_SCORE` | Convert score digits and render four characters |
-| `$0C` | `$086D` | `CMD_ADVANCE_AND_SET_TIMER_PHASE` | Advance script and update RAM `$2029` from timer `$2003` |
+| Reserved $00 | $08C7 | `CMD_RETURN` | Unused table word; dispatcher handles zero separately |
+| $01 | $0B7C | `SCRIPT_STORE_STATE_2011` | Read one inline byte; write $2011 |
+| $02 | $0B72 | `SCRIPT_STORE_STATE_2010` | Read one inline byte; write $2010 |
+| $03 | $08A2 | `INITIALIZE_GAME_STATE` | Reset game state and draw startup display |
+| $04 | $0B22 | `CMD_RENDER_TEXT` | Inline byte count, source address, video destination |
+| $05 | $0AED | `CMD_READ_HARDWARE_PORT` | Build and execute a RAM `IN port; RET` stub |
+| $06 | $0B86 | `SCRIPT_JUMP_ABSOLUTE` | Read 16-bit inline address and replace program cursor |
+| $07 | $0AE1 | `CMD_COPY_POINTED_BYTE` | Write one immediate byte to a 16-bit destination |
+| $08 | $0A9F | `CMD_COPY_INLINE_BYTES_REVERSED` | Inline count, destination and byte payload; descending destination |
+| $09 | $0ABC | `CMD_SELECT_AND_RENDER_TEXT` | Read four inline word addresses and choose one encoded string |
+| $0A | $0A53 | `CMD_RENDER_SCORE` | Format packed BCD score and render four characters |
+| $0B | $086D | `CMD_ADVANCE_AND_SET_TIMER_PHASE` | Update program pointer and timer-derived phase value |
 
-Each name now appears both as an actual assembly label at the native entry address and as the `DW` operand. The original address and command number are preserved in the table. Names describe inspected instructions; they are not claimed DNA-era symbols.
+The eleven handler symbols and the reserved entry are defined in native assembly at their exact ROM addresses. Their `DW` table operands are symbols, not copied numerical addresses.
 
-The script/data region begins at `$0929`. This is not assembly code; inline values may be command bytes, lengths, coordinates, or addresses consumed by a specific handler. A disassembler must not freely decode this region into 8080 instructions.
+### Interpreted game-command streams
 
-## ROM data and graphics findings
+The three marked streams now have **34 complete command records occupying 144 original ROM bytes**. The first stream starts at `$0929` (58 bytes, 13 commands), the second at `$0963` (67 bytes, 14 commands), and the auxiliary at `$09A6` (19 bytes, 7 commands). Every command is represented by a named `SCRIPT_*` opcode, with `DB` for bytes and `DW` for original little-endian 16-bit operands. Re-expanding all directives reproduces the original 144 bytes exactly.
 
-### Game-command data and handler vectors
+The first six source bytes at `$0929` decode as:
 
-`$0929–$09E7` is 191 bytes, divided at code-referenced boundaries `$0929`, `$0963`, `$09A6`, `$09BA`, `$09C2`, `$09CA`, and `$09DA` (the first table currently begins at `$09B9`; the `$09BA` reference enters one byte into it). The labels delimit selected streams, packed input-code values and an additional native service address table; their full operand grammars are not yet asserted. `$09E8–$09FF` comprises 12 little-endian handler vectors, now expressed as native zmac `DW` words. They are not an additional executable program stream.
+```asm
+        DB SCRIPT_RENDER_TEXT
+        DB $01                  ; one glyph
+        DW $0EB8               ; encoded text source
+        DW $3E30               ; video destination
+```
+
+The next command at `$092F` is `SCRIPT_SELECT_TEXT`, referring to selector `$2005`, video buffer `$3833` and two text strings at `$0EE6` and `$0EF1`. This is the same control structure used by the runtime at `$0ABC`.
+
+Frame-control bytes are preserved as `SCRIPT_FRAME_CONTROL`, not treated as unallocated padding. For example the primary stream at `$0956` and `$095F` contains zero-frame commands, followed by a jump at `$0960` back to `$094E`. The secondary stream contains two counted reverse-copy operations (command `$08`) at `$0983` and `$0993`, used to initialize game state tables.
+
+The auxiliary stream ends with `SCRIPT_UPDATE_TIMER_PHASE` at `$09B8`. There are no unparsed bytes between these stream boundaries and the following packed input-code table.
+
+### Native service and input tables
+
+`$09B9–$09C9` holds two packed input-code tables. `$09CA–$09E7` contains fifteen little-endian native address entries, separate from the twelve-word interpreter dispatch table at `$09E8`. The source documents them as `DW` entries; their specific input-trigger conditions require more call-site tracing.
 
 ### Character graphics and prefixes
 
@@ -94,7 +109,7 @@ The following `$0F04–$0F23` holds a repeated `$3A–$3C` display-symbol sequen
 
 ### Integrity method
 
-The data edits were independently checked by expanding literal `DB` values before and after rewriting: script/lookup data 191 bytes, numeric trailer 13 bytes, pre-alphabet data 57 bytes, graphic/text block 487 bytes, legend data 48 bytes, final lookup/descriptors 145 bytes. Handler vectors were converted into twelve `DW` values with the same low-byte-first addresses. The 27-byte tail remains all `$FF`.
+The data edits were independently checked by expanding literal `DB` values before and after rewriting: script/lookup data 191 bytes, numeric trailer 13 bytes, pre-alphabet data 57 bytes, graphic/text block 487 bytes, legend data 48 bytes, final lookup/descriptors 145 bytes. Handler vectors were converted into twelve `DW` values (one reserved) with the same low-byte-first addresses. The 27-byte tail remains all `$FF`.
 
 These are **source-level byte checks**, not a zmac-assembled ROM comparison. The original four ROM hashes and MAME execution remain mandatory validation gates.
 
@@ -103,7 +118,7 @@ These are **source-level byte checks**, not a zmac-assembled ROM comparison. The
 | ID | Status | Verification criterion |
 | --- | --- | --- |
 | SW-RE-001 | Partial | Replaced all 111 remaining address-only branch labels with context names; labels and branch roles remain reviewable against execution tracing |
-| SW-RE-002 | Partial | All 12 handler names now mapped to native entry labels with inspected operations; finish exact operand widths and stack/register contracts |
+| SW-RE-002 | Partial | Verified reserved table entry and 11 native commands, decoded 34 script commands into symbolic opcodes and typed operands; finish native operand/stack contracts |
 | SW-RE-003 | Partial | Six ship graphics tied to the native spawn routine, eleven ROM graphics previewed in normal/reversed bit order; reproduce sub-byte shift and full screen placement in MAME |
 | SW-RE-004 | Partial | All 36 glyphs plus thirteen trailer and 57 pre-alphabet bytes shown inline; verify interpretation of non-glyph data |
 | SW-RE-005 | Partial | Twelve eight-byte descriptor records split and graphic pointer byte-order verified; decode remaining fields against callers |
@@ -113,7 +128,7 @@ These are **source-level byte checks**, not a zmac-assembled ROM comparison. The
 
 ## Verification record
 
-**Performed:** MAME Sea Wolf I/O and MB14241 source inspection, native handler control-flow inspection, identification of six original ship graphics from the spawn path, and byte-exact ROM previews for both shifter bit orientations.  Direct Checkmate source-style comparison, source-label naming pass (no remaining `Lxxxx` labels), 36 inline 8×10 font glyphs, eleven inline graphic records, twelve object descriptors, named scripts/lookup boundaries, twelve `DW` handler vectors and 27 explicit `$FF` fill bytes. Source-level checks compared every rewritten data byte and found no mismatch in the verified regions; static named CALL/JP checks found no missing label references. Memory-map SVG and build destinations were revised.
+**Performed:** MAME Sea Wolf I/O and MB14241 source inspection, native handler control-flow inspection, identification of six original ship graphics from the spawn path, and byte-exact ROM previews for both shifter bit orientations.  Direct Checkmate source-style comparison, source-label naming pass (no remaining `Lxxxx` labels), 36 inline 8×10 font glyphs, eleven inline graphic records, twelve object descriptors, named scripts/lookup boundaries, eleven indexed handlers plus a reserved `DW` table slot and 27 explicit `$FF` fill bytes. Source-level checks compared every rewritten data byte and found no mismatch in the verified regions; static named CALL/JP checks found no missing label references. Memory-map SVG and build destinations were revised.
 
 **Not performed:** Native zmac invocation, checksum verification of newly assembled output, MAME execution, physical cabinet execution. The updated build writes to `build/` and creates ignored `roms/seawolf.zip`.
 
