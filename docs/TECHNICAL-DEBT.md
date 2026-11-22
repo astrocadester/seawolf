@@ -29,3 +29,5 @@ Style/layout follow-up: all original `Lxxxx` labels have been replaced with cont
 - Data classification is now evidence-based: eleven graphics with width/height/raster row consistency; 12 object records at `$0F7E` whose first two bytes are a high-byte-first graphic pointer; and 27 `$FF` bytes at ROM end. Exact graphic IDs and remaining descriptor fields remain unverified.
 - Native assembler execution, original ROM checksums and MAME runtime remain outstanding. Source-level comparisons of rewritten literal DB ranges were performed and matched; they do not replace compilation verification. The earlier `$0F78` record grouping was wrong, corrected to `$0F7E`. The graphic display polarity/mask interpretation has not been verified.
 - `$0BF3–$0BFF` and `$0C00–$0C38` are bounded raster/control data; no invented glyph purpose is assigned beyond what the bytes establish.
+
+Resolved labeling defect: `$09CA–$09E7` contains 15 native two-byte pointer values; former input-edge/debounce names were speculative. Graphic data still requires hardware blitter polarity and masking review before any ASCII art can be treated as a faithful ship rendering.
