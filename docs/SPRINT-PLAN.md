@@ -11,5 +11,5 @@ Checkmate source style aligned in the active branch: header, section spacing, na
 ### SW-RE graphics and data milestone — 2026-11-21
 
 - Redesigned `images/seawolf-memory-map.svg` in the Checkmate address-space card style; four ROM chips, 1 KB work RAM, 7 KB video RAM and a self-contained Sea Wolf-themed upper-right emblem.
-- Resolved script/lookup region boundaries, twelve little-endian handler vectors, eleven measured width×height graphics, twelve eight-byte descriptor records, overlapping packed text and 27 bytes of ROM EOF fill.
+- Resolved script/lookup region boundaries, twelve little-endian handler vectors, eleven measured width×height graphics, twelve correctly aligned eight-byte descriptor records beginning at `$0F7E`, overlapping packed text and 27 bytes of ROM EOF fill. The misaligned `$0F78` descriptor grouping has been repaired, and text is now represented as byte-exact string expressions.
 - Remaining gates: inspect actual object rendering and command parameter contracts; run original zmac build, four chip SHA-1 comparisons, MAME display/input/score/sound checks before merge. No claim of emulator validation in this milestone.
