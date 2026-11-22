@@ -1801,30 +1801,61 @@ CHECK_COIN_INPUT:
         RET Z
         JP INPUT_DECREMENT_TIMER
 
-; Interpreted game command bytes and inline operands; not native opcodes.
+; Initial game command stream ($0929).
 GAME_SCRIPT_STREAMS:
         DB $04,$01,$B8,$0E,$30,$3E,$09,$05,$20,$33,$38,$E6
         DB $0E,$F1,$0E,$04,$1A,$CC,$0E,$02,$3C,$0A,$06,$20
         DB $E9,$21,$25,$3E,$0A,$2B,$20,$E9,$21,$35,$3E,$02
         DB $0F,$04,$09,$C3,$0E,$0B,$2C,$01,$1E,$00,$04,$09
-        DB $B8,$0E,$0B,$2C,$01,$1E,$00,$06,$4E,$09,$03,$04
-        DB $08,$FC,$0E,$0C,$2C,$04,$0A,$CC,$0E,$02,$3C,$0A
-        DB $06,$20,$E9,$21,$25,$3E,$09,$05,$20,$33,$38,$E6
-        DB $0E,$F1,$0E,$01,$5A,$00,$08,$09,$60,$20,$EB,$0D
-        DB $20,$15,$00,$E0,$00,$01,$C4,$01,$5A,$00,$08,$09
-        DB $EF,$20,$75,$0E,$9C,$E0,$FA,$00,$A8,$00,$C0,$01
-        DB $B4,$00,$06,$63,$09,$01,$0F,$00,$03,$04,$09,$29
-        DB $0F,$0E,$3C,$07,$28,$22,$20,$07,$0A,$21,$20,$0B
-        DB $00,$48,$44,$42,$41,$88,$84,$82,$81,$18,$14,$12
-        DB $11,$28,$24,$22,$21,$C8,$08,$F8,$08,$C7,$08,$C7
-        DB $08,$4D,$08,$C7,$08,$C7,$08,$C7,$08,$C7,$08,$C7
-        DB $08,$C7,$08,$C7,$08,$C7,$08,$7B,$05,$C7,$08
-; Game script/native handler pointer region begins here.
+        DB $B8,$0E,$0B,$2C,$01,$1E,$00,$06,$4E,$09
+
+; Second command stream, selected at $056C ($0963).
+GAME_SCRIPT_SECONDARY:
+        DB $03,$04,$08,$FC,$0E,$0C,$2C,$04,$0A,$CC,$0E,$02
+        DB $3C,$0A,$06,$20,$E9,$21,$25,$3E,$09,$05,$20,$33
+        DB $38,$E6,$0E,$F1,$0E,$01,$5A,$00,$08,$09,$60,$20
+        DB $EB,$0D,$20,$15,$00,$E0,$00,$01,$C4,$01,$5A,$00
+        DB $08,$09,$EF,$20,$75,$0E,$9C,$E0,$FA,$00,$A8,$00
+        DB $C0,$01,$B4,$00,$06,$63,$09
+
+; Script and inline operand continuation ($09A6).
+GAME_SCRIPT_AUXILIARY:
+        DB $01,$0F,$00,$03,$04,$09,$29,$0F,$0E,$3C,$07,$28
+        DB $22,$20,$07,$0A,$21,$20,$0B
+
+; Bit mask and input lookup bytes ($09B9).
+GAME_INPUT_MASKS:
+        DB $00,$48,$44,$42,$41,$88,$84,$82,$81
+
+; Input bit field table ($09C2).
+GAME_INPUT_BIT_TABLE:
+        DB $18,$14,$12,$11,$28,$24,$22,$21
+
+; Input edge lookup ($09CA).
+GAME_INPUT_EDGE_TABLE:
+        DB $C8,$08,$F8,$08,$C7,$08,$C7,$08,$4D,$08,$C7,$08
+        DB $C7,$08,$C7,$08
+
+; Input debounce lookup ($09DA).
+GAME_INPUT_DEBOUNCE_TABLE:
+        DB $C7,$08,$C7,$08,$C7,$08,$C7,$08,$C7,$08,$7B,$05
+        DB $C7,$08
 
 ; Indexed 16-bit native handler addresses, little endian.
+; Twelve 16-bit native handler vectors indexed by nonzero commands $01–$0C.
 GAME_COMMAND_HANDLER_TABLE:
-        DB $C7,$08,$7C,$0B,$72,$0B,$A2,$08,$22,$0B,$ED,$0A
-        DB $86,$0B,$E1,$0A,$9F,$0A,$BC,$0A,$53,$0A,$6D,$08
+        DW $08C7  ; $01
+        DW $0B7C  ; $02
+        DW $0B72  ; $03
+        DW $08A2  ; $04
+        DW $0B22  ; $05
+        DW $0AED  ; $06
+        DW $0B86  ; $07
+        DW $0AE1  ; $08
+        DW $0A9F  ; $09
+        DW $0ABC  ; $0A
+        DW $0A53  ; $0B
+        DW $086D  ; $0C
 
 ; Set up bit-shift operands.
 BIT_SHIFT_SETUP:
@@ -2323,20 +2354,83 @@ FONT_DIGIT_9:
         DB $7C  ; .#####..
         DB $3C  ; ..####..
 
-; Additional numeric font/trailer bytes ($0BF3-$0BFF).
+; Thirteen graphic bytes immediately following the ten numeric 8x10 glyphs.
 NUMERIC_FONT_TRAILER:
-        DB $0C,$93,$60,$00,$00,$00,$00,$00,$00,$00,$60,$99
-        DB $06
+        DB $0C  ; ....##..
+        DB $93  ; #..#..##
+        DB $60  ; .##.....
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $60  ; .##.....
+        DB $99  ; #..##..#
+        DB $06  ; .....##.
 
 ; ROM device sw0044.e — SHA-1 bd345dd72fed8ce15da76c381782b025f71b006f
 
-; Original graphic header and leading pattern bytes.
+; Raster/control bytes preceding uppercase glyph A at $0C39.
 GRAPHICS_ASSET_ROM:
-        DB $00,$00,$00,$00,$00,$00,$00,$30,$CD,$02,$00,$00
-        DB $00,$00,$00,$00,$00,$02,$C0,$78,$E0,$80,$F0,$01
-        DB $C0,$F0,$7C,$08,$1C,$3E,$7F,$FF,$FF,$BF,$1F,$02
-        DB $40,$02,$80,$78,$1E,$07,$01,$7C,$F8,$0C,$10,$00
-        DB $00,$00,$00,$00,$00,$00,$00,$00,$00
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $30  ; ..##....
+        DB $CD  ; ##..##.#
+        DB $02  ; ......#.
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $02  ; ......#.
+        DB $C0  ; ##......
+        DB $78  ; .####...
+        DB $E0  ; ###.....
+        DB $80  ; #.......
+        DB $F0  ; ####....
+        DB $01  ; .......#
+        DB $C0  ; ##......
+        DB $F0  ; ####....
+        DB $7C  ; .#####..
+        DB $08  ; ....#...
+        DB $1C  ; ...###..
+        DB $3E  ; ..#####.
+        DB $7F  ; .#######
+        DB $FF  ; ########
+        DB $FF  ; ########
+        DB $BF  ; #.######
+        DB $1F  ; ...#####
+        DB $02  ; ......#.
+        DB $40  ; .#......
+        DB $02  ; ......#.
+        DB $80  ; #.......
+        DB $78  ; .####...
+        DB $1E  ; ...####.
+        DB $07  ; .....###
+        DB $01  ; .......#
+        DB $7C  ; .#####..
+        DB $F8  ; #####...
+        DB $0C  ; ....##..
+        DB $10  ; ...#....
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
+        DB $00  ; ........
 
 ; Uppercase font: 8x10 characters, ten bytes per glyph.
 
@@ -2678,100 +2772,166 @@ FONT_LETTER_Z:
         DB $7E  ; .######.
         DB $7E  ; .######.
 
-; Additional graphic and explosion/object bitmap bytes.
+; Graphic records selected by the original object descriptor pointers.
 OBJECT_GRAPHICS:
+
+; 5x12 graphic record ($0D3D).
+SHIP_GRAPHIC_0:
         DB $05,$0C,$00,$00,$08,$00,$00,$00,$00,$08,$00,$00
         DB $00,$60,$0E,$00,$00,$00,$E0,$CE,$3F,$00,$00,$E0
         DB $DE,$03,$00,$F8,$F7,$DF,$F7,$0F,$80,$F7,$DF,$F7
         DB $00,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$7F,$FF
         DB $FF,$FF,$FF,$3F,$FE,$FF,$FF,$FF,$1F,$FE,$FF,$FF
-        DB $FF,$0F,$04,$0C,$00,$00,$03,$00,$00,$36,$03,$00
-        DB $00,$36,$03,$00,$02,$B6,$03,$00,$87,$FF,$F3,$07
-        DB $E2,$FF,$F7,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$7F
-        DB $FF,$FF,$FF,$3F,$FC,$FF,$FF,$1F,$FC,$FF,$FF,$0F
-        DB $F8,$FF,$FF,$07,$05,$0C,$00,$00,$40,$00,$00,$00
-        DB $00,$F0,$00,$00,$00,$00,$F0,$00,$00,$00,$80,$F0
-        DB $1E,$00,$00,$00,$FB,$06,$00,$FF,$FF,$FF,$FF,$FF
-        DB $FC,$FF,$FF,$FF,$3F,$FC,$FF,$FF,$FF,$1F,$FC,$FF
-        DB $FF,$FF,$0F,$F8,$FF,$FF,$FF,$07,$F8,$FF,$FF,$FF
-        DB $03,$F8,$FF,$FF,$FF,$03,$04,$0B,$40,$00,$00,$02
-        DB $40,$80,$00,$02,$40,$00,$07,$02,$40,$00,$07,$02
-        DB $40,$F0,$07,$02,$FC,$F0,$07,$F8,$FC,$FF,$FF,$7F
-        DB $FC,$FF,$FF,$3F,$F8,$FF,$FF,$1F,$F0,$FF,$FF,$0F
-        DB $F0,$FF,$FF,$0F,$04,$0B,$80,$00,$00,$00,$00,$00
-        DB $00,$01,$A0,$01,$00,$01,$A0,$01,$00,$01,$F0,$01
-        DB $00,$01,$F8,$01,$00,$F9,$F8,$FF,$FF,$7F,$F0,$FF
-        DB $FF,$3F,$F0,$FF,$FF,$1F,$F0,$FF,$FF,$0F,$E0,$FF
-        DB $FF,$0F,$02,$06,$00,$03,$10,$07,$E0,$FF,$FF,$7F
-        DB $FF,$3F,$FF,$1F,$02,$0F,$10,$00,$30,$02,$70,$01
-        DB $FC,$00,$F8,$11,$F0,$3B,$E0,$7F,$C0,$3F,$80,$1F
-        DB $00,$3F,$00,$1E,$00,$04,$00,$48,$00,$F8,$00,$F8
+        DB $FF,$0F
+
+; 4x12 graphic record ($0D7B).
+SHIP_GRAPHIC_1:
+        DB $04,$0C,$00,$00,$03,$00,$00,$36,$03,$00,$00,$36
+        DB $03,$00,$02,$B6,$03,$00,$87,$FF,$F3,$07,$E2,$FF
+        DB $F7,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$7F,$FF,$FF
+        DB $FF,$3F,$FC,$FF,$FF,$1F,$FC,$FF,$FF,$0F,$F8,$FF
+        DB $FF,$07
+
+; 5x12 graphic record ($0DAD).
+SHIP_GRAPHIC_2:
+        DB $05,$0C,$00,$00,$40,$00,$00,$00,$00,$F0,$00,$00
+        DB $00,$00,$F0,$00,$00,$00,$80,$F0,$1E,$00,$00,$00
+        DB $FB,$06,$00,$FF,$FF,$FF,$FF,$FF,$FC,$FF,$FF,$FF
+        DB $3F,$FC,$FF,$FF,$FF,$1F,$FC,$FF,$FF,$FF,$0F,$F8
+        DB $FF,$FF,$FF,$07,$F8,$FF,$FF,$FF,$03,$F8,$FF,$FF
+        DB $FF,$03
+
+; 4x11 graphic record ($0DEB).
+SHIP_GRAPHIC_3:
+        DB $04,$0B,$40,$00,$00,$02,$40,$80,$00,$02,$40,$00
+        DB $07,$02,$40,$00,$07,$02,$40,$F0,$07,$02,$FC,$F0
+        DB $07,$F8,$FC,$FF,$FF,$7F,$FC,$FF,$FF,$3F,$F8,$FF
+        DB $FF,$1F,$F0,$FF,$FF,$0F,$F0,$FF,$FF,$0F
+
+; 4x11 graphic record ($0E19).
+SHIP_GRAPHIC_4:
+        DB $04,$0B,$80,$00,$00,$00,$00,$00,$00,$01,$A0,$01
+        DB $00,$01,$A0,$01,$00,$01,$F0,$01,$00,$01,$F8,$01
+        DB $00,$F9,$F8,$FF,$FF,$7F,$F0,$FF,$FF,$3F,$F0,$FF
+        DB $FF,$1F,$F0,$FF,$FF,$0F,$E0,$FF,$FF,$0F
+
+; 2x6 graphic record ($0E47).
+SHIP_GRAPHIC_5:
+        DB $02,$06,$00,$03,$10,$07,$E0,$FF,$FF,$7F,$FF,$3F
+        DB $FF,$1F,$02,$0F,$10,$00,$30,$02,$70,$01,$FC,$00
+        DB $F8,$11,$F0,$3B,$E0,$7F,$C0,$3F,$80,$1F,$00,$3F
+        DB $00,$1E,$00,$04,$00,$48,$00,$F8,$00,$F8
+
+; Object masks and raster pattern lookup ($0E75).
+GRAPHIC_PATTERN_LOOKUP:
         DB $01,$11,$10,$38,$38,$38,$38,$38,$38,$38,$38,$38
         DB $38,$38,$38,$10,$10,$10,$38,$01,$0E,$18,$18,$18
         DB $18,$18,$18,$18,$18,$18,$18,$18,$18,$00,$18,$01
         DB $09,$10,$10,$10,$10,$10,$10,$10,$10,$10,$01,$10
         DB $10,$BA,$7C,$FE,$7C,$38,$54,$10,$00,$10,$00,$08
-        DB $00,$00,$04,$00,$3D,$3E,$3F,$40,$40,$40,$40,$40
-        DB $40,$40,$40,$40,$40,$40,$47,$41,$4D,$45,$40,$4F
-        DB $56,$45,$52,$48,$49,$47,$48,$40,$53,$43,$4F,$52
-        DB $45,$40,$40,$40,$40,$40,$40,$59,$4F,$55,$52,$40
-        DB $53,$43,$4F,$52,$45,$49,$4E,$53,$45,$52,$54,$40
-        DB $43,$4F,$49,$4E,$50,$55,$53,$48,$40,$42,$55,$54
-        DB $54,$4F,$4E,$53,$45,$41,$40,$57,$4F,$4C,$46,$3A
-        DB $3B,$3C,$3B,$3C,$3A,$3B,$3C,$3A,$3C,$3B,$3C,$3A
-        DB $3B,$3A,$3C,$3B,$3A,$3C,$3A,$3B,$3C,$3A,$3C,$3B
-        DB $3C,$3A,$3B,$3C,$3A,$3B,$3C
+        DB $00,$00,$04,$00
+
+; Display-control data before encoded text ($0EB5).
+DISPLAY_TEXT_PREFIX:
+        DB $3D,$3E,$3F,$40,$40,$40,$40,$40,$40,$40,$40,$40
+        DB $40,$40
+
+; Display messages encoded with $40 spacing ($0EC3).
+DISPLAY_TEXT_MESSAGES:
+        DB $47,$41,$4D,$45,$40,$4F,$56,$45,$52,$48,$49,$47
+        DB $48,$40,$53,$43,$4F,$52,$45,$40,$40,$40,$40,$40
+        DB $40,$59,$4F,$55,$52,$40,$53,$43,$4F,$52,$45,$49
+        DB $4E,$53,$45,$52,$54,$40,$43,$4F,$49,$4E,$50,$55
+        DB $53,$48,$40,$42,$55,$54,$54,$4F,$4E,$53,$45,$41
+        DB $40,$57,$4F,$4C,$46
+
+; Repeating $3A–$3C display character indexes ($0F04).
+DISPLAY_SYMBOL_PATTERN:
+        DB $3A,$3B,$3C,$3B,$3C,$3A,$3B,$3C,$3A,$3C,$3B,$3C
+        DB $3A,$3B,$3A,$3C,$3B,$3A,$3C,$3A,$3B,$3C,$3A,$3C
+        DB $3B,$3C,$3A,$3B,$3C,$3A,$3B,$3C
 
 ; DISPLAY_LEGEND_TABLE ($0F24) - Embedded display words and game-status layout data
 ; -----------------------------------------------------------------------------
+; Bonus, time, score, extended legends ($0F24).
 DISPLAY_LEGEND_TABLE:
         DB $42,$4F,$4E,$55,$53,$54,$49,$4D,$45,$2D,$53,$43
         DB $4F,$52,$45,$45,$58,$54,$45,$4E,$44,$45,$44,$16
+
+; Time and display control values ($0F3C).
+DISPLAY_LEGEND_LAYOUT:
         DB $54,$49,$4D,$45,$44,$0F,$4C,$0F,$01,$41,$04,$3D
         DB $5A,$2F,$50,$3F,$01,$41,$04,$3D,$57,$2F,$4D,$3F
 
 ; Lookup data used by object placement and shifting.
+; Byte lookup from $0F54–$0F77.
 BIT_ORDER_LOOKUP:
         DB $61,$71,$81,$91,$03,$03,$03,$01,$01,$07,$00,$08
         DB $18,$10,$38,$30,$20,$28,$78,$70,$60,$68,$40,$48
         DB $58,$50,$F8,$F0,$E0,$E8,$C0,$C8,$D8,$D0,$80,$88
-        DB $98,$90,$B8,$B0,$A0,$A8,$0D,$3D,$20,$14,$00,$D8
-        DB $00,$02,$0D,$7B,$20,$14,$00,$E0,$00,$02,$0D,$AD
-        DB $20,$14,$00,$D8,$00,$02,$0D,$EB,$20,$15,$00,$E0
-        DB $00,$01,$0E,$19,$20,$15,$00,$E0,$00,$01,$0E,$47
-        DB $20,$1A,$00,$F0,$00,$03,$0D,$3D,$40,$34,$00,$D8
-        DB $D8,$FE,$0D,$7B,$40,$34,$00,$E0,$E0,$FE,$0D,$AD
-        DB $40,$34,$00,$D8,$D8,$FE,$0D,$EB,$40,$35,$00,$E0
-        DB $E0,$FF,$0E,$19,$40,$35,$00,$E0,$E0,$FF,$0E,$47
+
+; Twelve eight-byte object descriptors, beginning at $0F78.
+; First two bytes in each record select a graphic (high byte, then low byte).
+OBJECT_DESCRIPTOR_TABLE:
+
+; Record 1, graphic $9890.
+OBJECT_RECORD_01:
+        DB $98,$90,$B8,$B0,$A0,$A8,$0D,$3D
+
+; Record 2, graphic $2014.
+OBJECT_RECORD_02:
+        DB $20,$14,$00,$D8,$00,$02,$0D,$7B
+
+; Record 3, graphic $2014.
+OBJECT_RECORD_03:
+        DB $20,$14,$00,$E0,$00,$02,$0D,$AD
+
+; Record 4, graphic $2014.
+OBJECT_RECORD_04:
+        DB $20,$14,$00,$D8,$00,$02,$0D,$EB
+
+; Record 5, graphic $2015.
+OBJECT_RECORD_05:
+        DB $20,$15,$00,$E0,$00,$01,$0E,$19
+
+; Record 6, graphic $2015.
+OBJECT_RECORD_06:
+        DB $20,$15,$00,$E0,$00,$01,$0E,$47
+
+; Record 7, graphic $201A.
+OBJECT_RECORD_07:
+        DB $20,$1A,$00,$F0,$00,$03,$0D,$3D
+
+; Record 8, graphic $4034.
+OBJECT_RECORD_08:
+        DB $40,$34,$00,$D8,$D8,$FE,$0D,$7B
+
+; Record 9, graphic $4034.
+OBJECT_RECORD_09:
+        DB $40,$34,$00,$E0,$E0,$FE,$0D,$AD
+
+; Record 10, graphic $4034.
+OBJECT_RECORD_10:
+        DB $40,$34,$00,$D8,$D8,$FE,$0D,$EB
+
+; Record 11, graphic $4035.
+OBJECT_RECORD_11:
+        DB $40,$35,$00,$E0,$E0,$FF,$0E,$19
+
+; Record 12, graphic $4035.
+OBJECT_RECORD_12:
+        DB $40,$35,$00,$E0,$E0,$FF,$0E,$47
+
+; Thirteen following object selection/control bytes, $0FD8–$0FE4.
+OBJECT_CONTROL_BYTES:
         DB $40,$3A,$00,$F0,$F0,$FD,$06,$04,$02,$06,$03,$05
         DB $01
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
-        RST $38
+
+; Unused end-of-ROM fill, $0FE5–$0FFF (27 bytes of $FF).
+ROM_END_FILL:
+        DB $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+        DB $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
+        DB $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
 
         END
 
