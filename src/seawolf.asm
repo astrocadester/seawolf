@@ -1856,19 +1856,18 @@ GAME_SERVICE_VECTOR_SUBTABLE:
 ; Indexed 16-bit native handler addresses, little endian.
 ; Twelve 16-bit native handler vectors indexed by nonzero commands $01–$0C.
 GAME_COMMAND_HANDLER_TABLE:
-        DW $08C7  ; $01
-        DW $0B7C  ; $02
-        DW $0B72  ; $03
-        DW $08A2  ; $04
-        DW $0B22  ; $05
-        DW $0AED  ; $06
-        DW $0B86  ; $07
-        DW $0AE1  ; $08
-        DW $0A9F  ; $09
-        DW $0ABC  ; $0A
-        DW $0A53  ; $0B
-        DW $086D  ; $0C
-
+        DW $08C7  ;         DW $08C7  ;  — native handler; behavior pending register tracing
+        DW $0B7C  ; $02 — store next inline byte at RAM $2011
+        DW $0B72  ; $03 — store next inline byte at RAM $2010
+        DW $08A2  ; $04 — initialize game state
+        DW $0B22  ; $05 — native handler; operand contract pending
+        DW $0AED  ; $06 — native handler; operand contract pending
+        DW $0B86  ; $07 — replace script pointer using inline 16-bit target
+        DW $0AE1  ; $08 — native handler; operand contract pending
+        DW $0A9F  ; $09 — native handler; operand contract pending
+        DW $0ABC  ; $0A — native handler; operand contract pending
+        DW $0A53  ; $0B — native handler; operand contract pending
+        DW $086D  ; $0C — native handler; operand contract pending
 ; Set up bit-shift operands.
 BIT_SHIFT_SETUP:
         LD A,E
