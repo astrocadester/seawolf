@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="940" height="1050" viewBox="0 0 940 1050">
-<title>Sea Wolf (1976) Intel 8080 memory map</title><desc>Four 1KB original ROM devices, working RAM, 7KB video RAM, and unmapped regions. Styled to match the Checkmate memory map.</desc>
+<title>Sea Wolf (1976) Intel 8080 memory map</title><desc>Sea Wolf 1976 memory map with four 1 KB ROM devices, 1 KB working RAM, 7 KB video RAM and unmapped address ranges.</desc>
 <rect width="940" height="1050" fill="#0d1724"/>
 <g font-family="Arial,Helvetica,sans-serif" fill="#f3f7fa">
 <text x="44" y="47" font-size="29" font-weight="700">Sea Wolf</text>
@@ -36,7 +36,7 @@
 <rect x="43" y="314" width="854" height="45" rx="8" fill="#071522" stroke="#8399a5"/>
 <text x="470" y="336" text-anchor="middle" font-family="monospace" font-size="13" fill="#c8d8e9">$2000 Script cursor    $2002 Game timer    $2005 Credits</text>
 <text x="470" y="355" text-anchor="middle" font-family="monospace" font-size="13" fill="#a6d3e8">$202B Score    $2031–$215E Object state    $21E9 Display digits</text>
-</rect>
+
 <rect x="22" y="386" width="896" height="60" rx="15" fill="#59636d" stroke="#9aaabb" stroke-width="1"/>
 <text x="44" y="419" font-family="Arial" font-size="19" fill="#e7eff7">$1000–$1FFF</text>
 <text x="470" y="419" text-anchor="middle" font-family="Arial" font-size="20" font-weight="bold" fill="#fff">Unmapped</text>
@@ -51,22 +51,22 @@
 <path d="M44 549v9m0 9v9m0 9v9m0 9v5 M461 549v9m0 9v9m0 9v9m0 9v5" fill="none" stroke="#d7bd77" stroke-width="5" stroke-linecap="round"/>
 <text x="253" y="562" font-family="monospace" font-size="17" fill="#e8f0f6" text-anchor="middle">SW0041.H</text>
 <text x="253" y="582" font-family="monospace" font-size="12" fill="#99c9e1" text-anchor="middle">$0000–$03FF</text>
-<text x="253" y="600" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text></rect>
+<text x="253" y="600" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text>
 <rect x="484" y="535" width="407" height="77" rx="9" fill="#081624" stroke="#b6b19e"/>
 <path d="M479 549v9m0 9v9m0 9v9m0 9v5 M896 549v9m0 9v9m0 9v9m0 9v5" fill="none" stroke="#d7bd77" stroke-width="5" stroke-linecap="round"/>
 <text x="688" y="562" font-family="monospace" font-size="17" fill="#e8f0f6" text-anchor="middle">SW0042.G</text>
 <text x="688" y="582" font-family="monospace" font-size="12" fill="#99c9e1" text-anchor="middle">$0400–$07FF</text>
-<text x="688" y="600" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text></rect>
+<text x="688" y="600" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text>
 <rect x="49" y="628" width="407" height="77" rx="9" fill="#081624" stroke="#b6b19e"/>
 <path d="M44 642v9m0 9v9m0 9v9m0 9v5 M461 642v9m0 9v9m0 9v9m0 9v5" fill="none" stroke="#d7bd77" stroke-width="5" stroke-linecap="round"/>
 <text x="253" y="655" font-family="monospace" font-size="17" fill="#e8f0f6" text-anchor="middle">SW0043.F</text>
 <text x="253" y="675" font-family="monospace" font-size="12" fill="#99c9e1" text-anchor="middle">$0800–$0BFF</text>
-<text x="253" y="693" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text></rect>
+<text x="253" y="693" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text>
 <rect x="484" y="628" width="407" height="77" rx="9" fill="#081624" stroke="#b6b19e"/>
 <path d="M479 642v9m0 9v9m0 9v9m0 9v5 M896 642v9m0 9v9m0 9v9m0 9v5" fill="none" stroke="#d7bd77" stroke-width="5" stroke-linecap="round"/>
 <text x="688" y="655" font-family="monospace" font-size="17" fill="#e8f0f6" text-anchor="middle">SW0044.E</text>
 <text x="688" y="675" font-family="monospace" font-size="12" fill="#99c9e1" text-anchor="middle">$0C00–$0FFF</text>
-<text x="688" y="693" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text></rect>
+<text x="688" y="693" font-family="Arial" font-size="12" fill="#aebdcc" text-anchor="middle">1 KB</text>
 <rect x="43" y="730" width="854" height="267" rx="9" fill="#071522" stroke="#8aa1ad"/>
 <g font-family="monospace" font-size="14" fill="#d0dbe7">
 <text x="62" y="760">$0000 Reset    $0008/$0010 Interrupt vectors</text>
@@ -74,7 +74,7 @@
 <text x="62" y="822">$0929 / $0963 / $09A6 Game command streams</text>
 <text x="62" y="853">$09E8 Twelve native handler vectors</text>
 <text x="62" y="884">$0B8F Digits 0–9    $0C39 Letters A–Z</text>
-<text x="62" y="915">$0D3D–$0EB4 Eleven raster graphic records</text>
+<text x="62" y="915">$0D3D–$0EB4 Eleven packed graphics records</text>
 <text x="62" y="946">$0EB5–$0F53 Encoded text, legend and symbols</text>
-<text x="62" y="977">$0F78–$0FE4 Object data    $0FE5–$0FFF ROM fill</text>
-</g></g></svg>
+<text x="62" y="977">$0F7E–$0FDD Object records   $0FE5–$0FFF Fill</text>
+</g></svg>
