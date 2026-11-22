@@ -67,7 +67,7 @@ The disassembly follows [Checkmate's source style](https://github.com/astrocades
 | `$09A6–$09B8` | Auxiliary script/data |
 | `$09B9–$09C9` | Two packed input-code tables |
 | `$09CA–$09E7` | Fifteen little-endian native service addresses (`DW`) |
-| `$09E8–$09FF` | 12 little-endian native handler vectors (`DW`) |
+| `$09E8–$09FF` | Reserved word plus 11 indexed native handler vectors (`DW`) |
 | `$0B8F–$0BF2` | Ten labeled 8×10 digit glyphs |
 | `$0BF3–$0BFF` | 13 trailing graphic bytes, individual bitmap rows |
 | `$0C00–$0C38` | 57 pre-alphabet raster/control bytes, individually shown |
@@ -96,7 +96,7 @@ See [Sea Wolf RE](docs/SEA-WOLF-RE.md) for the record inventory and remaining se
 
 ## The indexed game interpreter
 
-At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. The source now records the **command number, actual handler symbol, and inspected effect on each `DW` line**. Command `$01` enters a single `RET` at `$08C7`; `$02`/`$03` store inline bytes, `$07` jumps to an inline script pointer, and other handlers implement text, score, byte transfer, hardware-port reads and timing. See the [handler table](docs/SEA-WOLF-RE.md#native-interpreter-and-interpreted-scripts) for all twelve.
+At `$045E` the native engine reads an interpreted command from the pointer stored at `$2000`, and selects a native operation using the table beginning at `$09E8`. The source now records the **command number, native handler symbol, and inspected operation on each `DW` line**. The first table word is a reserved return address; command `$00` enters frame control without indexing the table. Commands **`$01–$0B`** address the eleven subsequent handlers: `$01`/`$02` store inline bytes, `$06` changes the script pointer, and the others handle text, scoring, byte transfer, hardware I/O and timing. The three ROM scripts are now decoded into **34 symbolic commands across 144 byte-exact bytes**, with inline words expressed as `DW`. See the [handler and script RE](docs/SEA-WOLF-RE.md#native-interpreter-and-interpreted-scripts).
 
 ```mermaid
 flowchart TD
@@ -141,4 +141,4 @@ Contemporary Sea Wolf service, graphics and sound documents.
 
 ## Reverse-engineering progress
 
-The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Six ship types are now tied to the original spawn path and all twelve command handlers have verified entry-point names. Full shifter-position render reproduction, individual descriptor field meanings and native execution verification remain open. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
+The source replaces original address-only `Lxxxx` labels with contextual RE labels and uses Checkmate's source conventions. Six ship types are tied to the original spawn path; all eleven indexed command handlers and the reserved table word have verified entry-point labels. The three interpreted streams are decoded into 34 typed command records. Full shifter-position render reproduction, individual descriptor field meanings and native execution verification remain open. Those investigations remain explicitly tracked in [docs/SEA-WOLF-RE.md](docs/SEA-WOLF-RE.md).
